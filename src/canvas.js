@@ -15,13 +15,8 @@ const rect = la.rect
 
 class Canvas {
 
-	canvas_top    = 0
-	canvas_left   = 0
-	canvas_width  = 0
-	canvas_height = 0
-	window_width  = 0
-	window_height = 0
-
+	canvas_rect   = new Rect
+	window_size   = new la.Size
 	mouse         = new Vec
 	mouse_down    = false
 	mouse_prev    = /**@type {Vec | null}*/ (null)
@@ -126,6 +121,48 @@ export function get_canvas_translate(c) {
 }
 
 /**
+ @param   {Canvas} c
+ @param   {Vec}    pos
+ @returns {Vec}    */
+export function pos_window_to_rvec(c, pos) {
+
+	let ratio = la.vec_to_rvec_in_rect(c.canvas_rect, pos)
+	let {width, height} = c.ctx.canvas
+
+	/*
+		correct for aspect ratio by shifting the shorter side's axis
+	*/
+	ratio.x = ratio.x * Math.min(1, width/height) + get_ar_margin(width/height)
+	ratio.y = ratio.y * Math.min(1, height/width) + get_ar_margin(height/width)
+
+	return ratio
+}
+
+/**
+ @param   {Canvas} c
+ @param   {Vec}    rvec
+ @returns {Vec}    */
+export function rvec_to_graph(c, rvec) {
+	let grid_size = c.graph.options.grid_size
+
+	let {x, y} = rvec
+
+	/* to graph plane */
+	x = x * grid_size/c.scale
+	y = y * grid_size/c.scale
+
+	/* correct for scale shifting the origin */
+	x += grid_size/2 - grid_size/c.scale/2
+	y += grid_size/2 - grid_size/c.scale/2
+
+	/* add user position */
+	x += c.pos.x
+	y += c.pos.y
+
+	return vec(x, y)
+}
+
+/**
  * @param   {Canvas} c
  * @returns {void}  */
 function handle_move_camera(c) {
@@ -143,20 +180,37 @@ function handle_move_camera(c) {
 }
 
 /**
+ * @param   {Canvas} c  
+ * @returns {void}   */
+export function update_canvas_rect(c) {
+
+	const rect = c.ctx.canvas.getBoundingClientRect()
+	const dpr  = window.devicePixelRatio || 1
+	
+	c.ctx.canvas.width  = rect.width  * dpr
+	c.ctx.canvas.height = rect.height * dpr
+
+	c.canvas_rect.x = rect.left
+	c.canvas_rect.y = rect.top
+	c.canvas_rect.w = rect.width
+	c.canvas_rect.h = rect.height
+	c.window_size.w = window.innerWidth
+	c.window_size.h = window.innerHeight
+}
+
+/**
  * @param   {Canvas} c 
  * @param   {number} dt 
  * @returns {void}   */
-export function update_canvas(c, dt) {
+export function update_canvas_gestures(c, dt) {
 
-	const dpr = window.devicePixelRatio || 1
+	let is_mouse_in_canvas = la.vec_in_rect(c.canvas_rect, c.mouse)
 
-	let canvas_rect     = rect(c.canvas_left, c.canvas_top, c.canvas_width, c.canvas_height)
-	let mouse_in_canvas = la.vec_in_rect(canvas_rect, c.mouse)
-
-	let mouse_grid = vec(
-		(c.mouse.x - c.canvas_left) * dpr + c.pos.x,
-		(c.mouse.y - c.canvas_top ) * dpr + c.pos.y,
-	)
+	let mouse_ratio = pos_window_to_rvec(c, c.mouse)
+	
+	handle_move_camera(c)
+	
+	let mouse_graph = rvec_to_graph(c, mouse_ratio)
 
 	// switch (c.mode) {
 	// case Interaction_Mode.Move:
@@ -191,7 +245,16 @@ export function update_canvas(c, dt) {
 
 	// c.ctx.clearRect(0, 0, c.canvas_width * c.dpr, c.canvas_height * c.dpr)
 	// c.ctx.translate(-c.camera_poc.x, -c.camera_poc.y)
+
+	log_el.innerHTML = `
+		mouse:        ${ctx2d.vec_string(c.mouse)}
+		mouse_ratio:  ${ctx2d.vec_string(mouse_ratio)}
+		mouse_graph:  ${ctx2d.vec_string(mouse_graph)}
+	`
+	
 }
+
+let log_el = document.body.appendChild(document.createElement("pre"))
 
 /**
  @param {Canvas} c 

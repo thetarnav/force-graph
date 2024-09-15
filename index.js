@@ -47,7 +47,6 @@ export function get_graph_from_data() {
 
 function main() {
 	const canvas_el = /** @type {HTMLCanvasElement} */ (document.getElementById("canvas"))
-	const dpr = window.devicePixelRatio || 1
 
 	const ctx = canvas_el.getContext("2d")
 	if (ctx == null) {
@@ -66,7 +65,7 @@ function main() {
 	void requestAnimationFrame(prev_time => {
 		function frame(/** @type {number} */ time) {
 			fg.simulate(g)
-			fc.update_canvas(c, time - prev_time)
+			fc.update_canvas_gestures(c, time - prev_time)
 			fc.draw_canvas_default(c)
 			prev_time = time
 			void requestAnimationFrame(frame)
@@ -74,23 +73,10 @@ function main() {
 		void requestAnimationFrame(frame)
 	})
 	
-	function on_canvas_resize() {
-		const rect = canvas_el.getBoundingClientRect()
-	
-		canvas_el.width  = rect.width  * dpr
-		canvas_el.height = rect.height * dpr
-		canvas_el.width  = rect.width  * dpr
-		canvas_el.height = rect.height * dpr
-
-		c.canvas_top     = rect.top
-		c.canvas_left    = rect.left
-		c.canvas_width   = rect.width
-		c.canvas_height  = rect.height
-		c.window_width   = window.innerWidth
-		c.window_height  = window.innerHeight
-	}
-	on_canvas_resize()
-	window.addEventListener("resize", on_canvas_resize)
+	fc.update_canvas_rect(c)
+	window.addEventListener("resize", () => {
+		fc.update_canvas_rect(c)
+	})
 
 	document.addEventListener("pointermove", e => {
 		c.mouse.x = e.clientX

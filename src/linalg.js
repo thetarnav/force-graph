@@ -305,6 +305,11 @@ export function arc(x, y, r, start, end) {
 	return a
 }
 
+export class Size {
+	w = 0
+	h = 0
+}
+
 export class Rect extends Vec2 {
 	w = 0
 	h = 0
@@ -339,6 +344,25 @@ export function vec_in_rect(rect, point) {
  export function xy_in_rect(rect, x, y) {
 	return x >= rect.x && x < rect.x+rect.w &&
 	       y >= rect.y && y < rect.y+rect.h
+}
+
+/**
+ @param   {Rect} rect
+ @param   {Vec2} vec
+ @returns {Vec2} */
+ export function vec_to_rvec_in_rect(rect, vec) {
+	return xy_to_rvec_in_rect(rect, vec.x, vec.y)
+}
+/**
+ @param   {Rect}   rect
+ @param   {number} x
+ @param   {number} y
+ @returns {Vec2}   */
+export function xy_to_rvec_in_rect(rect, x, y) {
+	return vec2(
+		(x - rect.x) / rect.w,
+		(y - rect.y) / rect.h,
+	)
 }
 
 /**
