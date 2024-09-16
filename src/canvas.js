@@ -15,13 +15,14 @@ const rect = la.rect
 
 class Canvas {
 
-	canvas_rect      = new Rect
-	window_size      = new la.Size
-	mouse            = new Vec
-	mouse_down       = false
-	mouse_down_graph = /**@type {Vec | null}*/ (null)
-	space_down       = false
-	wheel_delta      = 0
+	canvas_rect    = new Rect
+	window_size    = new la.Size
+	mouse          = new Vec
+	mouse_down     = false
+	/** @type {Vec | null} graph pos where the drag started */
+	mouse_down_pos = null
+	space_down     = false
+	wheel_delta    = 0
 	
 	pos       = new Vec
 	scale     = 2
@@ -233,6 +234,20 @@ export function update_canvas_gestures(c, dt) {
 
 	let is_mouse_in_canvas = la.vec_in_rect(c.canvas_rect, c.mouse)
 
+	/** @type {Vec} Graph pos where the cursor should be */
+	let anchor
+
+	/*
+	 MOVE
+	*/
+	if (c.mouse_down) {
+		c.mouse_down_pos ||= pos_window_to_graph(c, c.mouse)
+		anchor             = c.mouse_down_pos
+	} else {
+		c.mouse_down_pos   = null
+		anchor             = pos_window_to_graph(c, c.mouse)
+	}
+
 	/*
 	 SCROLL
 	 smoothed - applied only a part of delta a frame
@@ -242,46 +257,34 @@ export function update_canvas_gestures(c, dt) {
 		c.wheel_delta -= delta_y
 
 		/*
-			Use a sine function slow down the zooming as it gets closer to the min and max zoom
-			y = sin(x • π) where x is the current zoom % and y is the delta multiplier
-			the current zoom need to be converted to a % with a small offset
-			because sin(0) = sin(π) = 0 which would completely stop the zooming
+		 Use a sine function slow down the zooming as it gets closer to min and max
+		 y = sin(x • π) where x = current zoom % and y = delta multiplier
+		 the current zoom need to be converted to % with a small offset
+		 because sin(0) = sin(π) = 0 which would completely stop the zooming
+
+		        _--_     <- fast
+		      /     \\
+		    /         \
+		   |           \
+		  |             \
+		 |              \  <- slow
+		MIN     mid     MAX
 		*/
 		let offset            = 1 / ((c.scale_max - 1) * 2)
 		let scale_with_offset = math.map_range(c.scale, 1, c.scale_max, offset, 1 - offset)
 		let zoom_mod          = math.sin(scale_with_offset * math.PI)
-		let new_scale         = math.clamp(c.scale + delta_y * zoom_mod * -0.005, 1, c.scale_max)
 
-		if (c.mouse_down) {
-			// MOVE will handle correcting pos
-			c.scale = new_scale
-		} else {
-			let mouse_before_graph = pos_window_to_graph(c, c.mouse)
-			c.scale = new_scale
-			let mouse_after_graph  = pos_window_to_graph(c, c.mouse)
-	
-			set_translate_xy(c,
-				c.pos.x - (mouse_after_graph.x-mouse_before_graph.x),
-				c.pos.y - (mouse_after_graph.y-mouse_before_graph.y),
-			)
-		}
+		c.scale = math.clamp(c.scale + delta_y * zoom_mod * -0.005, 1, c.scale_max)
 	}
 
-	/*
-	 MOVE
-	*/
-	if (c.mouse_down) {
-		let mouse_graph = pos_window_to_graph(c, c.mouse)
-
-		c.mouse_down_graph ||= la.vec_copy(mouse_graph)
-
+	{ /* Make sure the anchor is under the cursor */
+		let mouse_pos = pos_window_to_graph(c, c.mouse)
 		set_translate_xy(c,
-			c.pos.x - (mouse_graph.x-c.mouse_down_graph.x),
-			c.pos.y - (mouse_graph.y-c.mouse_down_graph.y),
+			c.pos.x - (mouse_pos.x-anchor.x),
+			c.pos.y - (mouse_pos.y-anchor.y),
 		)
-	} else {
-		c.mouse_down_graph = null
 	}
+
 
 
 	// switch (c.mode) {

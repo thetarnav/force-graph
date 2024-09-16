@@ -49,6 +49,13 @@ export function vec_set(dst, src) {
 	dst.x = src.x
 	dst.y = src.y
 }
+/**
+ @param   {Vec2} a
+ @param   {Vec2} b
+ @returns {boolean} */
+ export function vec_equals(a, b) {
+	return a.x === b.x && a.y === b.y
+}
 
 export const VEC_ZERO = new Vec2
 
