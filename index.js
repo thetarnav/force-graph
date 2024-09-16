@@ -1,5 +1,6 @@
 import * as fg from "./src/force.js"
 import * as fc from "./src/canvas.js"
+import * as la from "./src/linalg.js"
 
 import raw_data from "./data.json" with {type: "json"}
 
@@ -84,11 +85,21 @@ function main() {
 	})
 	canvas_el.addEventListener("pointerdown", e => {
 		c.mouse_down = true
-		c.mouse.x = e.clientX
-		c.mouse.y = e.clientY
+		c.mouse.x    = e.clientX
+		c.mouse.y    = e.clientY
 	})
 	document.addEventListener("pointerup", e => {
-		c.mouse_down = false	
+		c.mouse_down = false
+		c.mouse.x    = e.clientX
+		c.mouse.y    = e.clientY
+	})
+	canvas_el.addEventListener("wheel", e => {
+		e.preventDefault()
+
+		c.mouse.x = e.clientX
+		c.mouse.y = e.clientY
+
+		c.wheel_delta += e.deltaY/2
 	})
 	document.addEventListener("keydown", e => {
 		switch (e.key) {

@@ -133,3 +133,23 @@ export function find_open_upper_bound(max) {
 		n = max - Number.EPSILON * (++m)
 	return n
 }
+
+
+/**
+ @param   {number} value
+ @param   {number} in_min
+ @param   {number} in_max
+ @param   {number} out_min
+ @param   {number} out_max
+ @returns {number} */
+export function map_range(value, in_min, in_max, out_min, out_max) {
+	return ((value - in_min) * (out_max - out_min)) / (in_max - in_min) + out_min
+}
+/**
+ @param   {number} value
+ @param   {number} min
+ @param   {number} max
+ @returns {number} */
+export function to_percent(value, min, max) {
+	return (value - min) / (max - min)
+}

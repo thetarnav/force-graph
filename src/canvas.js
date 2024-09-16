@@ -15,18 +15,19 @@ const rect = la.rect
 
 class Canvas {
 
-	canvas_rect   = new Rect
-	window_size   = new la.Size
-	mouse         = new Vec
-	mouse_down    = false
-	mouse_prev    = /**@type {Vec | null}*/ (null)
-	space_down    = false
+	canvas_rect      = new Rect
+	window_size      = new la.Size
+	mouse            = new Vec
+	mouse_down       = false
+	mouse_down_graph = /**@type {Vec | null}*/ (null)
+	space_down       = false
+	wheel_delta      = 0
 	
-	pos           = new Vec
-	scale         = 1
-	scale_min     = 0
-	scale_max     = 7
-	mode          = /**@type {Interaction_Mode}*/ (Interaction_Mode.Default)
+	pos       = new Vec
+	scale     = 2
+	scale_min = 0
+	scale_max = 7
+	mode      = /**@type {Interaction_Mode}*/ (Interaction_Mode.Default)
 	
 	constructor(
 		/**@type {Ctx2D}*/       ctx,
@@ -163,20 +164,46 @@ export function rvec_to_graph(c, rvec) {
 }
 
 /**
- * @param   {Canvas} c
- * @returns {void}  */
-function handle_move_camera(c) {
-	if (c.mouse_down) {
-		if (c.mouse_prev === null) {
-			c.mouse_prev = new Vec()
-		} else {
-			c.pos.x += c.mouse_prev.x - c.mouse.x
-			c.pos.y += c.mouse_prev.y - c.mouse.y
-		}
-		la.vec_set(c.mouse_prev, c.mouse)
-	} else {
-		c.mouse_prev = null
-	}
+ @param   {Canvas} c
+ @param   {Vec}    pos
+ @returns {Vec}    */
+ export function pos_window_to_graph(c, pos) {
+	let ratio = pos_window_to_rvec(c, pos)
+	return rvec_to_graph(c, ratio)
+}
+
+/**
+ @param {Canvas} c 
+ @param {number} x 
+ @param {number} y 
+*/
+export function set_translate_xy(c, x, y) {
+
+	let grid_size       = c.graph.options.grid_size
+	let {width, height} = c.ctx.canvas
+
+	let radius      = grid_size/2
+	let ar_offset_x = get_ar_margin(width/height) * (grid_size/c.scale)
+	let ar_offset_y = get_ar_margin(height/width) * (grid_size/c.scale)
+
+	let min = radius/c.scale - radius
+	let max = radius - radius/c.scale
+
+	c.pos.x = math.clamp(x, min-ar_offset_x, max+ar_offset_x)
+	c.pos.y = math.clamp(y, min-ar_offset_y, max+ar_offset_y)
+}
+/**
+ @param {Canvas} c 
+ @param {Vec}    t 
+*/
+export function set_translate(c, t) {
+	set_translate_xy(c, t.x, t.y)
+}
+/**
+ @param {Canvas} c
+*/
+export function update_translate(c) {
+	set_translate(c, c.pos)
 }
 
 /**
@@ -206,11 +233,56 @@ export function update_canvas_gestures(c, dt) {
 
 	let is_mouse_in_canvas = la.vec_in_rect(c.canvas_rect, c.mouse)
 
-	let mouse_ratio = pos_window_to_rvec(c, c.mouse)
+	/*
+	 SCROLL
+	 smoothed - applied only a part of delta a frame
+	*/
+	if (c.wheel_delta) {
+		let delta_y = math.exp_decay(0, c.wheel_delta, 0.2, dt)
+		c.wheel_delta -= delta_y
+
+		/*
+			Use a sine function slow down the zooming as it gets closer to the min and max zoom
+			y = sin(x • π) where x is the current zoom % and y is the delta multiplier
+			the current zoom need to be converted to a % with a small offset
+			because sin(0) = sin(π) = 0 which would completely stop the zooming
+		*/
+		let offset            = 1 / ((c.scale_max - 1) * 2)
+		let scale_with_offset = math.map_range(c.scale, 1, c.scale_max, offset, 1 - offset)
+		let zoom_mod          = math.sin(scale_with_offset * math.PI)
+		let new_scale         = math.clamp(c.scale + delta_y * zoom_mod * -0.005, 1, c.scale_max)
+
+		if (c.mouse_down) {
+			// MOVE will handle correcting pos
+			c.scale = new_scale
+		} else {
+			let mouse_before_graph = pos_window_to_graph(c, c.mouse)
+			c.scale = new_scale
+			let mouse_after_graph  = pos_window_to_graph(c, c.mouse)
 	
-	handle_move_camera(c)
-	
-	let mouse_graph = rvec_to_graph(c, mouse_ratio)
+			set_translate_xy(c,
+				c.pos.x - (mouse_after_graph.x-mouse_before_graph.x),
+				c.pos.y - (mouse_after_graph.y-mouse_before_graph.y),
+			)
+		}
+	}
+
+	/*
+	 MOVE
+	*/
+	if (c.mouse_down) {
+		let mouse_graph = pos_window_to_graph(c, c.mouse)
+
+		c.mouse_down_graph ||= la.vec_copy(mouse_graph)
+
+		set_translate_xy(c,
+			c.pos.x - (mouse_graph.x-c.mouse_down_graph.x),
+			c.pos.y - (mouse_graph.y-c.mouse_down_graph.y),
+		)
+	} else {
+		c.mouse_down_graph = null
+	}
+
 
 	// switch (c.mode) {
 	// case Interaction_Mode.Move:
@@ -247,9 +319,9 @@ export function update_canvas_gestures(c, dt) {
 	// c.ctx.translate(-c.camera_poc.x, -c.camera_poc.y)
 
 	log_el.innerHTML = `
-		mouse:        ${ctx2d.vec_string(c.mouse)}
-		mouse_ratio:  ${ctx2d.vec_string(mouse_ratio)}
-		mouse_graph:  ${ctx2d.vec_string(mouse_graph)}
+		mouse:       ${ctx2d.vec_string(c.mouse)}
+		mouse_graph: ${ctx2d.vec_string(pos_window_to_graph(c, c.mouse))}
+		wheel_delta: ${ctx2d.num_string(c.wheel_delta)}
 	`
 	
 }
