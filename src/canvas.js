@@ -24,11 +24,12 @@ class Canvas {
 	space_down     = false
 	wheel_delta    = 0
 	
-	pos       = new Vec
-	scale     = 2
-	scale_min = 0
-	scale_max = 7
-	mode      = /**@type {Interaction_Mode}*/ (Interaction_Mode.Default)
+	pos          = new Vec
+	scale        = 2
+	scale_min    = 0
+	scale_max    = 7
+	mode         = /**@type {Interaction_Mode}*/ (Interaction_Mode.Default)
+	hovered_node = /** @type {force.Node | null} */ (null)
 	
 	constructor(
 		/**@type {Ctx2D}*/       ctx,
@@ -285,6 +286,11 @@ export function update_canvas_gestures(c, dt) {
 		)
 	}
 
+	let mouse_pos = pos_window_to_graph(c, c.mouse)
+	let max_size = math.max(c.ctx.canvas.width, c.ctx.canvas.height)
+	let pointer_node_radius = get_pointer_node_radius(max_size, c.graph.options.grid_size)
+
+	c.hovered_node = force.find_closest_node_linear(c.graph, mouse_pos, pointer_node_radius)
 
 
 	// switch (c.mode) {
@@ -326,7 +332,6 @@ export function update_canvas_gestures(c, dt) {
 		mouse_graph: ${ctx2d.vec_string(pos_window_to_graph(c, c.mouse))}
 		wheel_delta: ${ctx2d.num_string(c.wheel_delta)}
 	`
-	
 }
 
 let log_el = document.body.appendChild(document.createElement("pre"))
