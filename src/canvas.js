@@ -22,6 +22,11 @@ export const Mode = /** @type {const} */({
 
 class Canvas {
 
+	/* config */
+	drag_inertia  = 0.55
+	drag_strength = 0.015
+
+	/* inputs */
 	canvas_rect   = new Rect
 	window_size   = new la.Size
 	mouse         = new Vec
@@ -29,14 +34,17 @@ class Canvas {
 	space_down    = false
 	wheel_delta   = 0
 	
+	/* state */
 	pos           = new Vec
 	scale         = 2
 	scale_min     = 0
 	scale_max     = 7
 
+	/* mode state */
 	mode          = /**@type {Mode}*/(Mode.Init)
 	hover_node    = /**@type {force.Node | null}*/(null)
 	drag_node     = /**@type {force.Node | null}*/(null)
+	drag_vel      = new Vec
 	move_init_pos = new Vec
 	
 	constructor(
@@ -269,14 +277,13 @@ function update_scale(c, dt) {
 export function update_canvas_gestures(c, dt) {
 
 	let mouse_in_canvas  = la.vec_in_rect(c.canvas_rect, c.mouse)
-	let mouse_pos_before = pos_window_to_graph(c, c.mouse)
-
-	let max_size = math.max(c.ctx.canvas.width, c.ctx.canvas.height)
-	let hover_node_radius = get_pointer_node_radius(max_size, c.graph.options.grid_size)
 	
 	switch (c.mode) {
 	case Mode.Init: {
-
+			
+		let max_size = math.max(c.ctx.canvas.width, c.ctx.canvas.height)
+		let hover_node_radius = get_pointer_node_radius(max_size, c.graph.options.grid_size)
+		let mouse_pos_before = pos_window_to_graph(c, c.mouse)
 		c.hover_node = force.find_closest_node_linear(c.graph, mouse_pos_before, hover_node_radius)
 
 		if (c.mouse_down) {
@@ -318,11 +325,22 @@ export function update_canvas_gestures(c, dt) {
 			return update_canvas_gestures(c, dt)
 		}
 
+		let mouse_pos_before = pos_window_to_graph(c, c.mouse)
 		update_scale(c, dt)
 		update_translate_correct_cursor(c, mouse_pos_before)
 
 		let mouse_pos = pos_window_to_graph(c, c.mouse)
-		force.set_position(c.graph, node, mouse_pos)
+
+		c.drag_vel.x *= c.drag_inertia
+		c.drag_vel.y *= c.drag_inertia
+
+		c.drag_vel.x += (mouse_pos.x-node.pos.x) * c.drag_strength * dt
+		c.drag_vel.y += (mouse_pos.y-node.pos.y) * c.drag_strength * dt
+
+		force.set_position(c.graph, node, {
+			x: node.pos.x + c.drag_vel.x,
+			y: node.pos.y + c.drag_vel.y,
+		})
 
 		break
 	}

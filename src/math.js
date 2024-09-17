@@ -103,6 +103,16 @@ export function exp_decay(a, b, decay, dt = DT_FIXED) {
 	return b + (a-b) * exp(-decay * (dt/DT_FIXED))
 }
 
+// /**
+//  @param   {number} a from
+//  @param   {number} b to
+//  @param   {number} t time
+//  @returns {number} */
+// function spring(a, b, t) {
+// 	t = (math.sin(t * math.PI * (0.2 + 2.5 * t * t * t)) * math.pow(1-t, 2.2) + t) * (1 + (1.2 * (1-t)))
+// 	return a + (b - a) * t
+// }
+
 /**
  @param   {number} a
  @param   {number} b
