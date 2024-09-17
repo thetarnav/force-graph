@@ -200,7 +200,7 @@ export function update_translate(c) {
  @param {Canvas} c
  @param {Vec}    anchor
 */
-export function update_translate_from_anchor(c, anchor) {
+export function update_translate_correct_cursor(c, anchor) {
 
 	let mouse_pos = pos_window_to_graph(c, c.mouse)
 	set_translate_xy(c,
@@ -293,7 +293,7 @@ export function update_canvas_gestures(c, dt) {
 		}
 
 		update_scale(c, dt)
-		update_translate_from_anchor(c, mouse_pos_before)
+		update_translate_correct_cursor(c, mouse_pos_before)
 		break
 	}
 	case Mode.Move: {
@@ -304,7 +304,7 @@ export function update_canvas_gestures(c, dt) {
 		}
 
 		update_scale(c, dt)
-		update_translate_from_anchor(c, c.move_init_pos)
+		update_translate_correct_cursor(c, c.move_init_pos)
 		break
 	}
 	case Mode.Drag: {
@@ -319,7 +319,7 @@ export function update_canvas_gestures(c, dt) {
 		}
 
 		update_scale(c, dt)
-		update_translate_from_anchor(c, mouse_pos_before)
+		update_translate_correct_cursor(c, mouse_pos_before)
 
 		let mouse_pos = pos_window_to_graph(c, c.mouse)
 		force.set_position(c.graph, node, mouse_pos)
