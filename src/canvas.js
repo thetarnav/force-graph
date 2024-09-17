@@ -93,30 +93,6 @@ export function get_ar_margin(ar) {
 }
 
 /**
- @param   {Canvas} c 
- @returns {Vec}    */
-export function get_canvas_translate(c) {
-
-	let {width, height} = c.ctx.canvas
-	let max_size        = Math.max(width, height)
-	let grid_size       = c.graph.options.grid_size
-
-	/* origin (top-left corner) gets shifted away from the center */
-	let x = (1-c.scale) * max_size / 2
-	let y = (1-c.scale) * max_size / 2
-
-	/* subtract user position (to move camera in the opposite direction) */
-	x -= c.pos.x / grid_size * max_size * c.scale
-	y -= c.pos.y / grid_size * max_size * c.scale
-
-	/* correct for aspect ratio by shifting the shorter side's axis */
-	x += -get_ar_margin(width/height) * max_size
-	y += -get_ar_margin(height/width) * max_size
-
-	return {x, y}
-}
-
-/**
  @param   {Canvas} c
  @param   {Vec}    pos
  @returns {Vec}    */
@@ -165,6 +141,30 @@ export function rvec_to_graph(c, rvec) {
  export function pos_window_to_graph(c, pos) {
 	let ratio = pos_window_to_rvec(c, pos)
 	return rvec_to_graph(c, ratio)
+}
+
+/**
+ @param   {Canvas} c 
+ @returns {Vec}    */
+export function get_canvas_translate(c) {
+
+	let {width, height} = c.ctx.canvas
+	let max_size        = Math.max(width, height)
+	let grid_size       = c.graph.options.grid_size
+
+	/* origin (top-left corner) gets shifted away from the center */
+	let x = (1-c.scale) * max_size / 2
+	let y = (1-c.scale) * max_size / 2
+
+	/* subtract user position (to move camera in the opposite direction) */
+	x -= c.pos.x / grid_size * max_size * c.scale
+	y -= c.pos.y / grid_size * max_size * c.scale
+
+	/* correct for aspect ratio by shifting the shorter side's axis */
+	x += -get_ar_margin(width/height) * max_size
+	y += -get_ar_margin(height/width) * max_size
+
+	return {x, y}
 }
 
 /**
