@@ -13,23 +13,31 @@ const rect = la.rect
 
 /** @typedef {CanvasRenderingContext2D} Ctx2D */
 
+/** @enum {typeof Mode[keyof typeof Mode]} */
+export const Mode = /** @type {const} */({
+	Init: "INIT",
+	Drag: "DRAG",
+	Move: "MOVE",
+})
+
 class Canvas {
 
-	canvas_rect    = new Rect
-	window_size    = new la.Size
-	mouse          = new Vec
-	mouse_down     = false
-	/** @type {Vec | null} graph pos where the drag started */
-	mouse_down_pos = null
-	space_down     = false
-	wheel_delta    = 0
+	canvas_rect   = new Rect
+	window_size   = new la.Size
+	mouse         = new Vec
+	mouse_down    = false
+	space_down    = false
+	wheel_delta   = 0
 	
-	pos          = new Vec
-	scale        = 2
-	scale_min    = 0
-	scale_max    = 7
-	mode         = /**@type {Interaction_Mode}*/ (Interaction_Mode.Default)
-	hovered_node = /** @type {force.Node | null} */ (null)
+	pos           = new Vec
+	scale         = 2
+	scale_min     = 0
+	scale_max     = 7
+
+	mode          = /**@type {Mode}*/(Mode.Init)
+	hover_node    = /**@type {force.Node | null}*/(null)
+	drag_node     = /**@type {force.Node | null}*/(null)
+	move_init_pos = new Vec
 	
 	constructor(
 		/**@type {Ctx2D}*/       ctx,
@@ -46,29 +54,6 @@ class Canvas {
  @returns {Canvas}      */
 export function make_canvas(ctx, graph) {
 	return new Canvas(ctx, graph)
-}
-
-/** @enum {typeof Interaction_Mode[keyof typeof Interaction_Mode]} */
-export const Interaction_Mode = /** @type {const} */({
-	Default:        0,
-	NodeDrag:       1,
-	MoveSpace:      2,
-	MoveDrag:       3,
-	MoveMultiTouch: 4,
-})
-/** @type {Record<Interaction_Mode, string>} */
-export const interaction_mode_to_string_table = {
-	[Interaction_Mode.Default]:        "Default",
-	[Interaction_Mode.NodeDrag]:       "NodeDrag",
-	[Interaction_Mode.MoveSpace]:      "MoveSpace",
-	[Interaction_Mode.MoveDrag]:       "MoveDrag",
-	[Interaction_Mode.MoveMultiTouch]: "MoveMultiTouch",
-}
-/**
- * @param   {Interaction_Mode} mode
- * @returns {string} */
-export function interaction_mode_string(mode) {
-	return interaction_mode_to_string_table[mode]
 }
 
 /**
@@ -208,6 +193,22 @@ export function update_translate(c) {
 	set_translate(c, c.pos)
 }
 
+// TODO: do we need so many set_translate procs? so far it's only used once
+
+/**
+ Make sure the anchor is under the cursor
+ @param {Canvas} c
+ @param {Vec}    anchor
+*/
+export function update_translate_from_anchor(c, anchor) {
+
+	let mouse_pos = pos_window_to_graph(c, c.mouse)
+	set_translate_xy(c,
+		c.pos.x - (mouse_pos.x-anchor.x),
+		c.pos.y - (mouse_pos.y-anchor.y),
+	)
+}
+
 /**
  * @param   {Canvas} c  
  * @returns {void}   */
@@ -228,109 +229,110 @@ export function update_canvas_rect(c) {
 }
 
 /**
+ * @param   {Canvas} c
+ * @param   {number} dt 
+ * @returns {void}   */
+function update_scale(c, dt) {
+
+	if (c.wheel_delta === 0)
+		return
+	
+	/* smoothed - applied only a part of delta a frame */
+	let delta_y = math.exp_decay(0, c.wheel_delta, 0.2, dt)
+	c.wheel_delta -= delta_y
+
+	/*
+	 Use a sine function slow down the zooming as it gets closer to min and max
+	 y = sin(x • π) where x = current zoom % and y = delta multiplier
+	 the current zoom need to be converted to % with a small offset
+	 because sin(0) = sin(π) = 0 which would completely stop the zooming
+
+	        _--_     <- fast
+	      /     \\
+	    /         \
+	   |           \
+	  |             \
+	 |              \  <- slow
+	MIN     mid     MAX
+	*/
+	let offset            = 1 / ((c.scale_max - 1) * 2)
+	let scale_with_offset = math.map_range(c.scale, 1, c.scale_max, offset, 1 - offset)
+	let zoom_mod          = math.sin(scale_with_offset * math.PI)
+
+	c.scale = math.clamp(c.scale + delta_y * zoom_mod * -0.005, 1, c.scale_max)
+}
+
+/**
  * @param   {Canvas} c 
  * @param   {number} dt 
  * @returns {void}   */
 export function update_canvas_gestures(c, dt) {
 
-	let is_mouse_in_canvas = la.vec_in_rect(c.canvas_rect, c.mouse)
+	let mouse_in_canvas  = la.vec_in_rect(c.canvas_rect, c.mouse)
+	let mouse_pos_before = pos_window_to_graph(c, c.mouse)
 
-	/** @type {Vec} Graph pos where the cursor should be */
-	let anchor
-
-	/*
-	 MOVE
-	*/
-	if (c.mouse_down) {
-		c.mouse_down_pos ||= pos_window_to_graph(c, c.mouse)
-		anchor             = c.mouse_down_pos
-	} else {
-		c.mouse_down_pos   = null
-		anchor             = pos_window_to_graph(c, c.mouse)
-	}
-
-	/*
-	 SCROLL
-	 smoothed - applied only a part of delta a frame
-	*/
-	if (c.wheel_delta) {
-		let delta_y = math.exp_decay(0, c.wheel_delta, 0.2, dt)
-		c.wheel_delta -= delta_y
-
-		/*
-		 Use a sine function slow down the zooming as it gets closer to min and max
-		 y = sin(x • π) where x = current zoom % and y = delta multiplier
-		 the current zoom need to be converted to % with a small offset
-		 because sin(0) = sin(π) = 0 which would completely stop the zooming
-
-		        _--_     <- fast
-		      /     \\
-		    /         \
-		   |           \
-		  |             \
-		 |              \  <- slow
-		MIN     mid     MAX
-		*/
-		let offset            = 1 / ((c.scale_max - 1) * 2)
-		let scale_with_offset = math.map_range(c.scale, 1, c.scale_max, offset, 1 - offset)
-		let zoom_mod          = math.sin(scale_with_offset * math.PI)
-
-		c.scale = math.clamp(c.scale + delta_y * zoom_mod * -0.005, 1, c.scale_max)
-	}
-
-	{ /* Make sure the anchor is under the cursor */
-		let mouse_pos = pos_window_to_graph(c, c.mouse)
-		set_translate_xy(c,
-			c.pos.x - (mouse_pos.x-anchor.x),
-			c.pos.y - (mouse_pos.y-anchor.y),
-		)
-	}
-
-	let mouse_pos = pos_window_to_graph(c, c.mouse)
 	let max_size = math.max(c.ctx.canvas.width, c.ctx.canvas.height)
-	let pointer_node_radius = get_pointer_node_radius(max_size, c.graph.options.grid_size)
+	let hover_node_radius = get_pointer_node_radius(max_size, c.graph.options.grid_size)
+	
+	switch (c.mode) {
+	case Mode.Init: {
 
-	c.hovered_node = force.find_closest_node_linear(c.graph, mouse_pos, pointer_node_radius)
+		c.hover_node = force.find_closest_node_linear(c.graph, mouse_pos_before, hover_node_radius)
 
+		if (c.mouse_down) {
+			if (c.hover_node) {
+				c.mode = Mode.Drag
+				c.drag_node = c.hover_node
+				c.drag_node.anchor = true
+				c.hover_node = null
+				return update_canvas_gestures(c, dt)
+			}
+			c.mode = Mode.Move
+			c.move_init_pos = mouse_pos_before
+			return update_canvas_gestures(c, dt)
+		}
 
-	// switch (c.mode) {
-	// case Interaction_Mode.Move:
-	// 	if (c.edit_down) {
-	// 		c.mouse_prev = null
-	// 		c.mode = Interaction_Mode.Edit
-	// 		break
-	// 	}
+		update_scale(c, dt)
+		update_translate_from_anchor(c, mouse_pos_before)
+		break
+	}
+	case Mode.Move: {
 
-	// 	handle_move_camera(s)
-	// 	break
-	// case Interaction_Mode.Space:
-	// 	if (!c.space_down) {
-	// 		c.mouse_prev = null
-	// 		c.mode = Interaction_Mode.Edit
-	// 		break
-	// 	}
+		if (!c.mouse_down) {
+			c.mode = Mode.Init
+			return update_canvas_gestures(c, dt)
+		}
 
-	// 	handle_move_camera(s)
-	// 	break
-	// case Interaction_Mode.Edit:
+		update_scale(c, dt)
+		update_translate_from_anchor(c, c.move_init_pos)
+		break
+	}
+	case Mode.Drag: {
 
+		let node = /** @type {force.Node} */(c.drag_node)
 
-	// 	break
-	// case Interaction_Mode.Drag:
+		if (!c.mouse_down) {
+			c.mode = Mode.Init
+			c.drag_node = null
+			node.anchor = false
+			return update_canvas_gestures(c, dt)
+		}
 
+		update_scale(c, dt)
+		update_translate_from_anchor(c, mouse_pos_before)
 
-	// 	break
-	// }
+		let mouse_pos = pos_window_to_graph(c, c.mouse)
+		force.set_position(c.graph, node, mouse_pos)
 
-	// Camera
-
-	// c.ctx.clearRect(0, 0, c.canvas_width * c.dpr, c.canvas_height * c.dpr)
-	// c.ctx.translate(-c.camera_poc.x, -c.camera_poc.y)
+		break
+	}
+	}
 
 	log_el.innerHTML = `
-		mouse:       ${ctx2d.vec_string(c.mouse)}
-		mouse_graph: ${ctx2d.vec_string(pos_window_to_graph(c, c.mouse))}
-		wheel_delta: ${ctx2d.num_string(c.wheel_delta)}
+		mode        = ${c.mode}
+		mouse       = ${ctx2d.vec_string(c.mouse)}
+		mouse_graph = ${ctx2d.vec_string(pos_window_to_graph(c, c.mouse))}
+		wheel_delta = ${ctx2d.num_string(c.wheel_delta)}
 	`
 }
 
@@ -365,7 +367,7 @@ export function draw_edges(c) {
 	for (let {a, b} of c.graph.edges) {
 		let opacity = 0.2 + ((a.mass + b.mass - 2) / 100) * 2 * c.scale
 
-		c.ctx.strokeStyle = a.anchor || b.anchor || c.hovered_node === a || c.hovered_node === b
+		c.ctx.strokeStyle = a.anchor || b.anchor || c.hover_node === a || c.hover_node === b
 			? `rgba(129, 140, 248, ${opacity})`
 			: `rgba(150, 150, 150, ${opacity})`
 		c.ctx.lineWidth = edge_width
@@ -398,7 +400,7 @@ export function draw_nodes_dots(c) {
 
 			let opacity = 0.6 + (node.mass / 10) * 4
 
-			c.ctx.fillStyle = node.anchor || c.hovered_node === node
+			c.ctx.fillStyle = node.anchor || c.hover_node === node
 				? `rgba(129, 140, 248, ${opacity})`
 				: `rgba(248, 113, 113, ${opacity})`
 			c.ctx.beginPath()
@@ -438,7 +440,7 @@ export function draw_nodes_text(c, clip_margin = {x: 100, y: 20}) {
 
 			let opacity = 0.6 + ((node.mass-1) / 50) * 4
 
-			c.ctx.fillStyle = node.anchor || c.hovered_node === node
+			c.ctx.fillStyle = node.anchor || c.hover_node === node
 				? `rgba(129, 140, 248, ${opacity})`
 				: `rgba(248, 113, 113, ${opacity})`
 
