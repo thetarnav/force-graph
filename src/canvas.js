@@ -329,13 +329,13 @@ export function update_canvas_gestures(c, dt) {
 		update_scale(c, dt)
 		update_translate_correct_cursor(c, mouse_pos_before)
 
-		let mouse_pos = pos_window_to_graph(c, c.mouse)
+		let target = pos_window_to_graph(c, c.mouse)
 
 		c.drag_vel.x *= c.drag_inertia
 		c.drag_vel.y *= c.drag_inertia
 
-		c.drag_vel.x += (mouse_pos.x-node.pos.x) * c.drag_strength * dt
-		c.drag_vel.y += (mouse_pos.y-node.pos.y) * c.drag_strength * dt
+		c.drag_vel.x += (target.x-node.pos.x) * c.drag_strength * dt
+		c.drag_vel.y += (target.y-node.pos.y) * c.drag_strength * dt
 
 		force.set_position(c.graph, node, {
 			x: node.pos.x + c.drag_vel.x,
