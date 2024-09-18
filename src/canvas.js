@@ -23,8 +23,8 @@ export const Mode = /** @type {const} */({
 class Canvas {
 
 	/* config */
-	drag_inertia  = 0.55
-	drag_strength = 0.015
+	drag_inertia  = 0.6
+	drag_strength = 0.25
 
 	/* inputs */
 	canvas_rect   = new Rect
@@ -238,15 +238,14 @@ export function update_canvas_rect(c) {
 
 /**
  * @param   {Canvas} c
- * @param   {number} dt 
  * @returns {void}   */
-function update_scale(c, dt) {
+function update_scale(c) {
 
 	if (c.wheel_delta === 0)
 		return
 	
 	/* smoothed - applied only a part of delta a frame */
-	let delta_y = math.exp_decay(0, c.wheel_delta, 0.2, dt)
+	let delta_y = math.lerp(0, c.wheel_delta, 0.2)
 	c.wheel_delta -= delta_y
 
 	/*
@@ -271,10 +270,9 @@ function update_scale(c, dt) {
 }
 
 /**
- * @param   {Canvas} c 
- * @param   {number} dt 
+ * @param   {Canvas} c
  * @returns {void}   */
-export function update_canvas_gestures(c, dt) {
+export function update_canvas_gestures(c) {
 
 	let mouse_in_canvas  = la.vec_in_rect(c.canvas_rect, c.mouse)
 	
@@ -288,18 +286,18 @@ export function update_canvas_gestures(c, dt) {
 
 		if (c.mouse_down) {
 			if (c.hover_node) {
-				c.mode = Mode.Drag
-				c.drag_node = c.hover_node
+				c.mode             = Mode.Drag
+				c.drag_node        = c.hover_node
 				c.drag_node.anchor = true
-				c.hover_node = null
-				return update_canvas_gestures(c, dt)
+				c.hover_node       = null
+				return update_canvas_gestures(c)
 			}
 			c.mode = Mode.Move
 			c.move_init_pos = mouse_pos_before
-			return update_canvas_gestures(c, dt)
+			return update_canvas_gestures(c)
 		}
 
-		update_scale(c, dt)
+		update_scale(c)
 		update_translate_correct_cursor(c, mouse_pos_before)
 		break
 	}
@@ -307,10 +305,10 @@ export function update_canvas_gestures(c, dt) {
 
 		if (!c.mouse_down) {
 			c.mode = Mode.Init
-			return update_canvas_gestures(c, dt)
+			return update_canvas_gestures(c)
 		}
 
-		update_scale(c, dt)
+		update_scale(c)
 		update_translate_correct_cursor(c, c.move_init_pos)
 		break
 	}
@@ -319,14 +317,16 @@ export function update_canvas_gestures(c, dt) {
 		let node = /** @type {force.Node} */(c.drag_node)
 
 		if (!c.mouse_down) {
-			c.mode = Mode.Init
-			c.drag_node = null
-			node.anchor = false
-			return update_canvas_gestures(c, dt)
+			c.mode       = Mode.Init
+			c.drag_node  = null
+			c.drag_vel.x = 0
+			c.drag_vel.y = 0
+			node.anchor  = false
+			return update_canvas_gestures(c)
 		}
 
 		let mouse_pos_before = pos_window_to_graph(c, c.mouse)
-		update_scale(c, dt)
+		update_scale(c)
 		update_translate_correct_cursor(c, mouse_pos_before)
 
 		let target = pos_window_to_graph(c, c.mouse)
@@ -334,8 +334,8 @@ export function update_canvas_gestures(c, dt) {
 		c.drag_vel.x *= c.drag_inertia
 		c.drag_vel.y *= c.drag_inertia
 
-		c.drag_vel.x += (target.x-node.pos.x) * c.drag_strength * dt
-		c.drag_vel.y += (target.y-node.pos.y) * c.drag_strength * dt
+		c.drag_vel.x += (target.x-node.pos.x) * c.drag_strength
+		c.drag_vel.y += (target.y-node.pos.y) * c.drag_strength
 
 		force.set_position(c.graph, node, {
 			x: node.pos.x + c.drag_vel.x,
@@ -391,9 +391,9 @@ export function draw_edges(c) {
 		c.ctx.lineWidth = edge_width
 		c.ctx.beginPath()
 		c.ctx.moveTo(a.pos.x / grid_size * max_size,
-					 a.pos.y / grid_size * max_size)
+		             a.pos.y / grid_size * max_size)
 		c.ctx.lineTo(b.pos.x / grid_size * max_size,
-					 b.pos.y / grid_size * max_size)
+		             b.pos.y / grid_size * max_size)
 		c.ctx.stroke()
 	}
 }
