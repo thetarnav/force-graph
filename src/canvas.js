@@ -380,22 +380,18 @@ export function draw_edges(c) {
 	let max_size  = math.max(c.ctx.canvas.width, c.ctx.canvas.height)
 	let grid_size = c.graph.options.grid_size
 
-	let edge_width = get_edge_width(max_size, c.scale)
+	c.ctx.beginPath()
+	c.ctx.lineWidth = get_edge_width(max_size, c.scale)
+	c.ctx.strokeStyle = `rgb(150, 150, 150)`
 
 	for (let {a, b} of c.graph.edges) {
-		let opacity = 0.2 + ((a.mass + b.mass - 2) / 100) * 2 * c.scale
-
-		c.ctx.strokeStyle = a.anchor || b.anchor || c.hover_node === a || c.hover_node === b
-			? `rgba(129, 140, 248, ${opacity})`
-			: `rgba(150, 150, 150, ${opacity})`
-		c.ctx.lineWidth = edge_width
-		c.ctx.beginPath()
 		c.ctx.moveTo(a.pos.x / grid_size * max_size,
 		             a.pos.y / grid_size * max_size)
 		c.ctx.lineTo(b.pos.x / grid_size * max_size,
 		             b.pos.y / grid_size * max_size)
-		c.ctx.stroke()
 	}
+	
+	c.ctx.stroke()
 }
 
 /**
@@ -444,8 +440,13 @@ export function draw_nodes_text(c, clip_margin = {x: 100, y: 20}) {
 
 	let clip_rect = ctx2d.get_clip_rect(c.ctx, clip_margin)
 
+	const COLOR_NORMAL = `rgb(248, 113, 113)`
+	const COLOR_HOVER  = `rgb(129, 140, 248)`
+
 	c.ctx.textAlign    = "center"
 	c.ctx.textBaseline = "middle"
+	c.ctx.fillStyle    = COLOR_NORMAL
+	c.ctx.font         = `6px sans-serif`
 
 	for (let node of c.graph.nodes) {
 
@@ -454,15 +455,22 @@ export function draw_nodes_text(c, clip_margin = {x: 100, y: 20}) {
 
 		if (la.xy_in_rect(clip_rect, x, y)) {
 
-			c.ctx.font = `${max_size/200 + (((node.mass-1) / 5) * (max_size/100)) / c.scale}px sans-serif`
+			let s = max_size/200 + (((node.mass-1) / 5) * (max_size/100)) / c.scale
+			s /= 6
 
-			let opacity = 0.6 + ((node.mass-1) / 50) * 4
+			c.ctx.scale(s, s)
 
-			c.ctx.fillStyle = node.anchor || c.hover_node === node
-				? `rgba(129, 140, 248, ${opacity})`
-				: `rgba(248, 113, 113, ${opacity})`
+			if (node.anchor || c.hover_node === node) {
+				c.ctx.fillStyle = COLOR_HOVER
+			}
 
-			c.ctx.fillText(node.label, x, y)
+			c.ctx.fillText(node.label, x/s, y/s)
+
+			if (node.anchor || c.hover_node === node) {
+				c.ctx.fillStyle = COLOR_NORMAL
+			}
+
+			c.ctx.scale(1/s, 1/s)
 		}
 	}
 }
