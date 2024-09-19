@@ -199,14 +199,18 @@ export function vec_abs(v) {
  @param   {number}   by
  @returns {number} */
 export function xy_distance(ax, ay, bx, by) {
-	return Math.hypot(ax-bx, ay-by)
+	let dx = ax-bx
+	let dy = ay-by
+	return sqrt(dx*dx + dy*dy)
 }
 /**
  @param   {Vec2}   a
  @param   {Vec2}   b
  @returns {number} */
 export function vec_distance(a, b) {
-	return hypot(a.x - b.x, a.y - b.y)
+	let dx = a.x-b.x
+	let dy = a.y-b.y
+	return sqrt(dx*dx + dy*dy)
 }
 /**
  @param   {Vec2}   a
@@ -236,7 +240,7 @@ export function vec_moved(v, angle, dist) {
  @param   {Vec2} v
  @returns {void} */
 export function vec_normalize(v) {
-	let len = hypot(v.x, v.y)
+	let len = sqrt(v.x*v.x + v.y*v.y)
 	if (len !== 0) {
 		v.x /= len
 		v.y /= len
@@ -246,7 +250,7 @@ export function vec_normalize(v) {
  @param   {Vec2} v
  @returns {Vec2} */
 export function vec_normalized(v) {
-	let len = hypot(v.x, v.y)
+	let len = sqrt(v.x*v.x + v.y*v.y)
 	if (len !== 0) {
 		return vec2(v.x / len, v.y / len)
 	}
@@ -603,7 +607,7 @@ export function arc_circle_intersecting(arc, circle) {
 export function circle_circle_intersections(A, B) {
 	let dx = B.x - A.x
 	let dy = B.y - A.y
-	let d  = hypot(dx, dy)
+	let d  = sqrt(dx*dx + dy*dy)
 
 	if (
 		d > (A.r + B.r) || // circles do not intersect
@@ -713,7 +717,7 @@ export function arc_between(a, b, dist) {
 	
 	let lx    = b.x - a.x
 	let ly    = b.y - a.y
-	let l     = hypot(lx, ly)
+	let l     = sqrt(lx*lx + ly*ly)
 	let mid   = vec2(a.x + lx/2, a.y + ly/2)
 	let angle = atan2(ly, lx)
 	let moved = vec_moved(mid, angle - PI/2, dist)

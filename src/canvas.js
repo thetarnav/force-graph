@@ -430,6 +430,7 @@ export function draw_nodes(c, clip_margin = {x: 100, y: 20}) {
 
 			let s = max_size/200 + (((node.mass-1) / 5) * (max_size/100)) / c.scale
 
+			/* HOVERED */
 			if (node.anchor || c.hover_node === node) {
 				s += (1 - c.scale/c.scale_max) * 10
 				c.ctx.scale(s, s)
@@ -438,11 +439,13 @@ export function draw_nodes(c, clip_margin = {x: 100, y: 20}) {
 				c.ctx.fillStyle = COLOR_NORMAL
 				c.ctx.scale(1/s, 1/s)
 			}
+			/* CLOSE */
 			else if ((c.scale/c.scale_max)*10 + node.mass*0.4 > 4) {
 				c.ctx.scale(s, s)
 				c.ctx.fillText(node.label, x/s, y/s)
 				c.ctx.scale(1/s, 1/s)
 			}
+			/* FAR AWAY */
 			else {
 				c.ctx.scale(s, s)
 				c.ctx.moveTo(x/s, y/s)
