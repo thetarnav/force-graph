@@ -68,14 +68,14 @@ export function make_canvas(ctx, graph) {
  @param   {number} canvas_size 
  @returns {number} */
 export function get_node_radius(canvas_size) {
-	return canvas_size / 300
+	return canvas_size / 400
 }
 /**
  @param   {number} canvas_size 
  @param   {number} grid_size
  @returns {number} */
 export function get_pointer_node_radius(canvas_size, grid_size) {
-	const margin = 6
+	const margin = 8
 	return ((get_node_radius(canvas_size) + margin) / canvas_size) * grid_size
 }
 /**
@@ -426,14 +426,14 @@ export function draw_nodes(c, clip_margin = {x: 100, y: 20}) {
 			let s = max_size/200 + (((node.mass-1) / 5) * (max_size/100)) / c.scale
 			s /= 6
 
+			c.ctx.scale(s, s)
+
 			if (s+c.scale > 3) {
 				if (node.anchor || c.hover_node === node) {
 					c.ctx.fillStyle = COLOR_HOVER
 				}
 
-				c.ctx.scale(s, s)
 				c.ctx.fillText(node.label, x/s, y/s)
-				c.ctx.scale(1/s, 1/s)
 
 				if (node.anchor || c.hover_node === node) {
 					c.ctx.fillStyle = COLOR_NORMAL
@@ -445,9 +445,9 @@ export function draw_nodes(c, clip_margin = {x: 100, y: 20}) {
 					c.ctx.beginPath()
 				}
 
-				c.ctx.moveTo(x, y)
+				c.ctx.moveTo(x/s, y/s)
 				c.ctx.ellipse(
-					x, y,
+					x/s, y/s,
 					radius, radius,
 					0, 0,
 					math.TAU,
@@ -459,6 +459,8 @@ export function draw_nodes(c, clip_margin = {x: 100, y: 20}) {
 					c.ctx.beginPath()
 				}
 			}
+			
+			c.ctx.scale(1/s, 1/s)
 		}
 	}
 
