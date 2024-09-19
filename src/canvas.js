@@ -68,14 +68,14 @@ export function make_canvas(ctx, graph) {
  @param   {number} canvas_size 
  @returns {number} */
 export function get_node_radius(canvas_size) {
-	return canvas_size / 240
+	return canvas_size / 300
 }
 /**
  @param   {number} canvas_size 
  @param   {number} grid_size
  @returns {number} */
 export function get_pointer_node_radius(canvas_size, grid_size) {
-	const margin = 5
+	const margin = 6
 	return ((get_node_radius(canvas_size) + margin) / canvas_size) * grid_size
 }
 /**
@@ -395,48 +395,14 @@ export function draw_edges(c) {
 }
 
 /**
- @param {Canvas} c 
+ @param {Canvas} c
+ @param {Vec}    [clip_margin]
 */
-export function draw_nodes_dots(c) {
+export function draw_nodes(c, clip_margin = {x: 100, y: 20}) {
 
 	let max_size  = math.max(c.ctx.canvas.width, c.ctx.canvas.height)
 	let grid_size = c.graph.options.grid_size
 	let radius    = get_node_radius(max_size)
-
-	let clip_rect = ctx2d.get_clip_rect(c.ctx, {x: radius, y: radius})
-
-	for (let node of c.graph.nodes) {
-
-		let x = node.pos.x / grid_size * max_size
-		let y = node.pos.y / grid_size * max_size
-
-		if (la.xy_in_rect(clip_rect, x, y)) {
-
-			let opacity = 0.6 + (node.mass / 10) * 4
-
-			c.ctx.fillStyle = node.anchor || c.hover_node === node
-				? `rgba(129, 140, 248, ${opacity})`
-				: `rgba(248, 113, 113, ${opacity})`
-			c.ctx.beginPath()
-			c.ctx.ellipse(
-				x, y,
-				radius, radius,
-				0, 0,
-				math.TAU,
-			)
-			c.ctx.fill()
-		}
-	}
-}
-
-/**
- @param {Canvas} c 
- @param {Vec}    [clip_margin]
-*/
-export function draw_nodes_text(c, clip_margin = {x: 100, y: 20}) {
-
-	let max_size  = Math.max(c.ctx.canvas.width, c.ctx.canvas.height)
-	let grid_size = c.graph.options.grid_size
 
 	let clip_rect = ctx2d.get_clip_rect(c.ctx, clip_margin)
 
@@ -448,6 +414,8 @@ export function draw_nodes_text(c, clip_margin = {x: 100, y: 20}) {
 	c.ctx.fillStyle    = COLOR_NORMAL
 	c.ctx.font         = `6px sans-serif`
 
+	c.ctx.beginPath()
+
 	for (let node of c.graph.nodes) {
 
 		let x = node.pos.x / grid_size * max_size
@@ -458,21 +426,43 @@ export function draw_nodes_text(c, clip_margin = {x: 100, y: 20}) {
 			let s = max_size/200 + (((node.mass-1) / 5) * (max_size/100)) / c.scale
 			s /= 6
 
-			c.ctx.scale(s, s)
+			if (s+c.scale > 3) {
+				if (node.anchor || c.hover_node === node) {
+					c.ctx.fillStyle = COLOR_HOVER
+				}
 
-			if (node.anchor || c.hover_node === node) {
-				c.ctx.fillStyle = COLOR_HOVER
+				c.ctx.scale(s, s)
+				c.ctx.fillText(node.label, x/s, y/s)
+				c.ctx.scale(1/s, 1/s)
+
+				if (node.anchor || c.hover_node === node) {
+					c.ctx.fillStyle = COLOR_NORMAL
+				}
+			} else {
+				if (node.anchor || c.hover_node === node) {
+					c.ctx.fill()
+					c.ctx.fillStyle = COLOR_HOVER
+					c.ctx.beginPath()
+				}
+
+				c.ctx.moveTo(x, y)
+				c.ctx.ellipse(
+					x, y,
+					radius, radius,
+					0, 0,
+					math.TAU,
+				)
+
+				if (node.anchor || c.hover_node === node) {
+					c.ctx.fill()
+					c.ctx.fillStyle = COLOR_NORMAL
+					c.ctx.beginPath()
+				}
 			}
-
-			c.ctx.fillText(node.label, x/s, y/s)
-
-			if (node.anchor || c.hover_node === node) {
-				c.ctx.fillStyle = COLOR_NORMAL
-			}
-
-			c.ctx.scale(1/s, 1/s)
 		}
 	}
+
+	c.ctx.fill()
 }
 
 /**
@@ -481,5 +471,5 @@ export function draw_nodes_text(c, clip_margin = {x: 100, y: 20}) {
 export function draw_canvas_default(c) {
 	draw_reset(c)
 	draw_edges(c)
-	draw_nodes_text(c)
+	draw_nodes(c)
 }
