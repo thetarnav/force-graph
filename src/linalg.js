@@ -234,7 +234,8 @@ export function vec_move(v, angle, dist) {
  @param   {number} dist
  @returns {Vec2}   */
 export function vec_moved(v, angle, dist) {
-	return vec2(v.x + cos(angle) * dist, v.y + sin(angle) * dist)
+	return vec2(v.x + cos(angle) * dist,
+	            v.y + sin(angle) * dist)
 }
 /**
  @param   {Vec2} v
@@ -404,7 +405,7 @@ export function segments_intersecting(p1, p2, p3, p4) {
 	let d4 = cross(vec_diff(p4, p1), vec_diff(p2, p1))
 
     // if the cross products have different signs, the segments intersect
-    return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0));
+    return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))
 }
 
 /**
