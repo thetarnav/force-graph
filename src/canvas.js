@@ -65,18 +65,18 @@ export function make_canvas(ctx, graph) {
 }
 
 /**
- @param   {number} canvas_size 
+ @param   {Canvas} c
  @returns {number} */
-export function get_node_radius(canvas_size) {
-	return canvas_size / 400
+export function get_node_radius(c) {
+	return 1/c.scale
 }
 /**
- @param   {number} canvas_size 
- @param   {number} grid_size
+ @param   {Canvas} c
  @returns {number} */
-export function get_pointer_node_radius(canvas_size, grid_size) {
-	const margin = 8
-	return ((get_node_radius(canvas_size) + margin) / canvas_size) * grid_size
+export function get_pointer_node_radius(c) {
+	let max_size = math.max(c.ctx.canvas.width, c.ctx.canvas.height)
+	const margin = 6
+	return ((get_node_radius(c) + margin) / max_size) * c.graph.options.grid_size
 }
 /**
  @param   {number} canvas_size 
@@ -280,7 +280,7 @@ export function update_canvas_gestures(c) {
 	case Mode.Init: {
 			
 		let max_size = math.max(c.ctx.canvas.width, c.ctx.canvas.height)
-		let hover_node_radius = get_pointer_node_radius(max_size, c.graph.options.grid_size)
+		let hover_node_radius = get_pointer_node_radius(c)
 		let mouse_pos_before = pos_window_to_graph(c, c.mouse)
 		c.hover_node = force.find_closest_node_linear(c.graph, mouse_pos_before, hover_node_radius)
 
@@ -346,15 +346,20 @@ export function update_canvas_gestures(c) {
 	}
 	}
 
-	log_el.innerHTML = `
-		mode        = ${c.mode}
-		mouse       = ${ctx2d.vec_string(c.mouse)}
-		mouse_graph = ${ctx2d.vec_string(pos_window_to_graph(c, c.mouse))}
-		wheel_delta = ${ctx2d.num_string(c.wheel_delta)}
-	`
+	log_el.innerHTML = 
+		"mode        = "+c.mode+"\n"+
+		"mouse       = "+ctx2d.vec_string(c.mouse)+"\n"+
+		"mouse_graph = "+ctx2d.vec_string(pos_window_to_graph(c, c.mouse))+"\n"+
+		"wheel_delta = "+ctx2d.num_string(c.wheel_delta)+"\n"+
+		"scale       = "+ctx2d.num_string(c.scale)+"\n"+
+		"pos         = "+ctx2d.vec_string(c.pos)
+	
 }
 
 let log_el = document.body.appendChild(document.createElement("pre"))
+log_el.style.position = "fixed"
+log_el.style.top  = "10px"
+log_el.style.left = "10px"
 
 /**
  @param {Canvas} c 
@@ -402,7 +407,7 @@ export function draw_nodes(c, clip_margin = {x: 100, y: 20}) {
 
 	let max_size  = math.max(c.ctx.canvas.width, c.ctx.canvas.height)
 	let grid_size = c.graph.options.grid_size
-	let radius    = get_node_radius(max_size)
+	let radius    = get_node_radius(c)
 
 	let clip_rect = ctx2d.get_clip_rect(c.ctx, clip_margin)
 
@@ -412,7 +417,7 @@ export function draw_nodes(c, clip_margin = {x: 100, y: 20}) {
 	c.ctx.textAlign    = "center"
 	c.ctx.textBaseline = "middle"
 	c.ctx.fillStyle    = COLOR_NORMAL
-	c.ctx.font         = `6px sans-serif`
+	c.ctx.font         = `1px sans-serif`
 
 	c.ctx.beginPath()
 
@@ -424,27 +429,22 @@ export function draw_nodes(c, clip_margin = {x: 100, y: 20}) {
 		if (la.xy_in_rect(clip_rect, x, y)) {
 
 			let s = max_size/200 + (((node.mass-1) / 5) * (max_size/100)) / c.scale
-			s /= 6
 
-			c.ctx.scale(s, s)
-
-			if (s+c.scale > 3) {
-				if (node.anchor || c.hover_node === node) {
-					c.ctx.fillStyle = COLOR_HOVER
-				}
-
+			if (node.anchor || c.hover_node === node) {
+				s += (1 - c.scale/c.scale_max) * 10
+				c.ctx.scale(s, s)
+				c.ctx.fillStyle = COLOR_HOVER
 				c.ctx.fillText(node.label, x/s, y/s)
-
-				if (node.anchor || c.hover_node === node) {
-					c.ctx.fillStyle = COLOR_NORMAL
-				}
-			} else {
-				if (node.anchor || c.hover_node === node) {
-					c.ctx.fill()
-					c.ctx.fillStyle = COLOR_HOVER
-					c.ctx.beginPath()
-				}
-
+				c.ctx.fillStyle = COLOR_NORMAL
+				c.ctx.scale(1/s, 1/s)
+			}
+			else if ((c.scale/c.scale_max)*10 + node.mass*0.4 > 4) {
+				c.ctx.scale(s, s)
+				c.ctx.fillText(node.label, x/s, y/s)
+				c.ctx.scale(1/s, 1/s)
+			}
+			else {
+				c.ctx.scale(s, s)
 				c.ctx.moveTo(x/s, y/s)
 				c.ctx.ellipse(
 					x/s, y/s,
@@ -452,15 +452,8 @@ export function draw_nodes(c, clip_margin = {x: 100, y: 20}) {
 					0, 0,
 					math.TAU,
 				)
-
-				if (node.anchor || c.hover_node === node) {
-					c.ctx.fill()
-					c.ctx.fillStyle = COLOR_NORMAL
-					c.ctx.beginPath()
-				}
+				c.ctx.scale(1/s, 1/s)
 			}
-			
-			c.ctx.scale(1/s, 1/s)
 		}
 	}
 
