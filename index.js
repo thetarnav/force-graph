@@ -123,6 +123,11 @@ function main() {
 		c.mouse.y = e.clientY
 		c.wheel_delta += e.deltaY/2
 	})
+	canvas_el.addEventListener("click", e => {
+		if (c.mode === fc.Mode.Drag) {
+			console.log("click", c.drag_node)
+		}
+	})
 	document.addEventListener("keydown", e => {
 		last_interaction = e.timeStamp
 		switch (e.key) {
@@ -141,7 +146,7 @@ function main() {
 		} else {
 			last_interaction = e.timeStamp
 		}
-	});
+	})
 
 	/*
 
