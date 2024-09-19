@@ -101,27 +101,27 @@ function main() {
 	})
 	document.addEventListener("pointermove", e => {
 		last_interaction = e.timeStamp
-		c.mouse.x = e.clientX
-		c.mouse.y = e.clientY
+		c.mouse.x        = e.clientX
+		c.mouse.y        = e.clientY
 	})
 	canvas_el.addEventListener("pointerdown", e => {
 		last_interaction = e.timeStamp
-		c.mouse_down = true
-		c.mouse.x    = e.clientX
-		c.mouse.y    = e.clientY
+		c.mouse_down     = true
+		c.mouse.x        = e.clientX
+		c.mouse.y        = e.clientY
 	})
 	document.addEventListener("pointerup", e => {
 		last_interaction = e.timeStamp
-		c.mouse_down = false
-		c.mouse.x    = e.clientX
-		c.mouse.y    = e.clientY
+		c.mouse_down     = false
+		c.mouse.x        = e.clientX
+		c.mouse.y        = e.clientY
 	})
 	canvas_el.addEventListener("wheel", e => {
 		e.preventDefault()
 		last_interaction = e.timeStamp
-		c.mouse.x = e.clientX
-		c.mouse.y = e.clientY
-		c.wheel_delta += e.deltaY/2
+		c.mouse.x        = e.clientX
+		c.mouse.y        = e.clientY
+		c.wheel_delta   += e.deltaY/2
 	})
 	canvas_el.addEventListener("click", e => {
 		if (c.mode === fc.Mode.Drag) {
