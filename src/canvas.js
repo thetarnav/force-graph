@@ -45,6 +45,8 @@ export class Canvas {
 	scale         = 2
 	scale_min     = 0
 	scale_max     = 7
+	pinch_init_ratio = 0
+	pinch_init_scale = 0
 
 	/* mode state */
 	mode          = /**@type {Mode}*/(Mode.Init)
@@ -81,7 +83,7 @@ export function get_node_radius(c) {
  @returns {number} */
 export function get_pointer_node_radius(c) {
 	let max_size = math.max(c.ctx.canvas.width, c.ctx.canvas.height)
-	const margin = 6
+	const margin = 8
 	return ((get_node_radius(c) + margin) / max_size) * c.graph.options.grid_size
 }
 /**
@@ -257,32 +259,59 @@ export function update_canvas_rect(c) {
  * @returns {void}   */
 function update_scale(c) {
 
-	if (c.wheel_delta === 0)
-		return
-	
-	/* smoothed - applied only a part of delta a frame */
-	let delta_y = math.lerp(0, c.wheel_delta, 0.2)
-	c.wheel_delta -= delta_y
+	/*
+	WHEEL SCROLLING
+	*/
+	if (c.wheel_delta !== 0) {
+		/* smoothed - applied only a part of delta a frame */
+		let delta_y = math.lerp(0, c.wheel_delta, 0.2)
+		c.wheel_delta -= delta_y
+
+		/*
+		 Use a sine function slow down the zooming as it gets closer to min and max
+		 y = sin(x • π) where x = current zoom % and y = delta multiplier
+		 the current zoom need to be converted to % with a small offset
+		 because sin(0) = sin(π) = 0 which would completely stop the zooming
+
+		        _--_     <- fast
+		      /     \\
+		    /         \
+		   |           \
+		  |             \
+		 |              \  <- slow
+		MIN     mid     MAX
+		*/
+		let offset            = 1 / ((c.scale_max - 1) * 2)
+		let scale_with_offset = math.map_range(c.scale, 1, c.scale_max, offset, 1 - offset)
+		let zoom_mod          = math.sin(scale_with_offset * math.PI)
+
+		c.scale += delta_y * zoom_mod * -0.005
+	}
 
 	/*
-	 Use a sine function slow down the zooming as it gets closer to min and max
-	 y = sin(x • π) where x = current zoom % and y = delta multiplier
-	 the current zoom need to be converted to % with a small offset
-	 because sin(0) = sin(π) = 0 which would completely stop the zooming
-
-	        _--_     <- fast
-	      /     \\
-	    /         \
-	   |           \
-	  |             \
-	 |              \  <- slow
-	MIN     mid     MAX
+	MULTI TOUCH - PINCH SCALING
 	*/
-	let offset            = 1 / ((c.scale_max - 1) * 2)
-	let scale_with_offset = math.map_range(c.scale, 1, c.scale_max, offset, 1 - offset)
-	let zoom_mod          = math.sin(scale_with_offset * math.PI)
+	if (c.pointer_1.down && c.pointer_0.down) {
 
-	c.scale = math.clamp(c.scale + delta_y * zoom_mod * -0.005, 1, c.scale_max)
+		let r0    = pos_window_to_rvec(c, c.pointer_0.pos)
+		let r1    = pos_window_to_rvec(c, c.pointer_1.pos)
+		let ratio = la.vec_distance(r0, r1)
+
+		if (c.pinch_init_ratio !== 0) {
+			c.scale = c.pinch_init_scale*(ratio/c.pinch_init_ratio)
+		} else {
+			c.pinch_init_ratio = ratio
+			c.pinch_init_scale = c.scale
+		}
+	} else {
+		c.pinch_init_ratio = 0
+		c.pinch_init_scale = 0
+	}
+
+	/*
+	CLAMP TO LIMITS
+	*/
+	c.scale = math.clamp(c.scale, 1, c.scale_max)
 }
 
 /**
@@ -363,8 +392,8 @@ export function update_canvas_gestures(c) {
 
 	log_el.innerHTML = 
 		`mode        = ${c.mode}\n`+
-		`pointer[0]  = (${c.pointer_0.id}, ${c.pointer_0.down}, ${ctx2d.vec_string(c.pointer_0.pos)}\n`+
-		`pointer[1]  = (${c.pointer_1.id}, ${c.pointer_1.down}, ${ctx2d.vec_string(c.pointer_1.pos)}\n`+
+		`pointer[0]  = (${c.pointer_0.id}, ${c.pointer_0.down}, ${ctx2d.vec_string(pos_window_to_rvec(c, c.pointer_0.pos))}\n`+
+		`pointer[1]  = (${c.pointer_1.id}, ${c.pointer_1.down}, ${ctx2d.vec_string(pos_window_to_rvec(c, c.pointer_1.pos))}\n`+
 		`wheel_delta = ${ctx2d.num_string(c.wheel_delta)}\n`+
 		`scale       = ${ctx2d.num_string(c.scale)}\n`+
 		`pos         = ${ctx2d.vec_string(c.pos)}`

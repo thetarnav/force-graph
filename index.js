@@ -110,8 +110,8 @@ function main() {
 		else return
 
 		p.id    = e.pointerId
-		p.pos.x = e.x
-		p.pos.y = e.y
+		p.pos.x = e.clientX
+		p.pos.y = e.clientY
 		if (e.pointerType === "touch") {
 			p.down = true
 		}
@@ -127,8 +127,8 @@ function main() {
 		else return
 
 		p.id    = e.pointerId
-		p.pos.x = e.x
-		p.pos.y = e.y
+		p.pos.x = e.clientX
+		p.pos.y = e.clientY
 		p.down  = true
 	})
 	document.addEventListener("pointerup", e => {
