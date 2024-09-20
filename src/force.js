@@ -337,11 +337,11 @@ export function get_node_connections(g, node) {
  **It doesn't check if the nodes are already connected.** Use `get_edge` to check before
  connecting.
  
- @param   {Graph} g
- @param   {Node} a
- @param   {Node} b
+ @param   {Graph}  g
+ @param   {Node}   a
+ @param   {Node}   b
  @param   {number} [strength]
- @returns {Edge} */
+ @returns {Edge}   */
 export function connect(g, a, b, strength = 1) {
 	/** @type {Edge} */
 	let edge = {a, b, strength}
@@ -352,9 +352,8 @@ export function connect(g, a, b, strength = 1) {
 
 /**
  @param {Graph} g
- @param {Node} a
- @param {Node} b
- @returns {void} */
+ @param {Node}  a
+ @param {Node}  b */
 export function disconnect(g, a, b) {
 	let idx = get_edge_idx(g, a, b)
 	if (idx != -1) {

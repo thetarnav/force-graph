@@ -27,12 +27,16 @@ class Canvas {
 	drag_strength = 0.25
 
 	/* inputs */
-	canvas_rect   = new Rect
-	window_size   = new la.Size
-	mouse         = new Vec
-	mouse_down    = false
-	space_down    = false
-	wheel_delta   = 0
+	canvas_rect    = new Rect
+	window_size    = new la.Size
+	pointer_0_id   = 0 /* zero means no pointer */
+	pointer_1_id   = 0 /* zero means no pointer */
+	pointer_0_pos  = new Vec
+	pointer_1_pos  = new Vec
+	pointer_0_down = false
+	pointer_1_down = false
+	space_down     = false
+	wheel_delta    = 0
 	
 	/* state */
 	pos           = new Vec
@@ -42,8 +46,8 @@ class Canvas {
 
 	/* mode state */
 	mode          = /**@type {Mode}*/(Mode.Init)
-	hover_node    = /**@type {force.Node | null}*/(null)
-	drag_node     = /**@type {force.Node | null}*/(null)
+	hover_node    = /**@type {force.Node?}*/(null)
+	drag_node     = /**@type {force.Node?}*/(null)
 	drag_vel      = new Vec
 	move_init_pos = new Vec
 	
@@ -138,9 +142,19 @@ export function rvec_to_graph(c, rvec) {
  @param   {Canvas} c
  @param   {Vec}    pos
  @returns {Vec}    */
- export function pos_window_to_graph(c, pos) {
+export function pos_window_to_graph(c, pos) {
 	let ratio = pos_window_to_rvec(c, pos)
 	return rvec_to_graph(c, ratio)
+}
+
+/**
+ @param   {Canvas} c
+ @returns {Vec}    */
+export function get_cursor_graph_pos(c) {
+	if (c.pointer_0_id !== 0) {
+		return pos_window_to_graph(c, c.pointer_0_pos)
+	}
+	return c.pos
 }
 
 /**
@@ -210,10 +224,10 @@ export function update_translate(c) {
 */
 export function update_translate_correct_cursor(c, anchor) {
 
-	let mouse_pos = pos_window_to_graph(c, c.mouse)
+	let cursor_pos = get_cursor_graph_pos(c)
 	set_translate_xy(c,
-		c.pos.x - (mouse_pos.x-anchor.x),
-		c.pos.y - (mouse_pos.y-anchor.y),
+		c.pos.x - (cursor_pos.x-anchor.x),
+		c.pos.y - (cursor_pos.y-anchor.y),
 	)
 }
 
@@ -273,18 +287,15 @@ function update_scale(c) {
  * @param   {Canvas} c
  * @returns {void}   */
 export function update_canvas_gestures(c) {
-
-	let mouse_in_canvas  = la.vec_in_rect(c.canvas_rect, c.mouse)
 	
 	switch (c.mode) {
 	case Mode.Init: {
-			
-		let max_size = math.max(c.ctx.canvas.width, c.ctx.canvas.height)
+		
 		let hover_node_radius = get_pointer_node_radius(c)
-		let mouse_pos_before = pos_window_to_graph(c, c.mouse)
-		c.hover_node = force.find_closest_node_linear(c.graph, mouse_pos_before, hover_node_radius)
+		let cursor_pos_before = get_cursor_graph_pos(c)
+		c.hover_node = force.find_closest_node_linear(c.graph, cursor_pos_before, hover_node_radius)
 
-		if (c.mouse_down) {
+		if (c.pointer_0_down) {
 			if (c.hover_node) {
 				c.mode             = Mode.Drag
 				c.drag_node        = c.hover_node
@@ -293,17 +304,17 @@ export function update_canvas_gestures(c) {
 				return update_canvas_gestures(c)
 			}
 			c.mode = Mode.Move
-			c.move_init_pos = mouse_pos_before
+			c.move_init_pos = cursor_pos_before
 			return update_canvas_gestures(c)
 		}
 
 		update_scale(c)
-		update_translate_correct_cursor(c, mouse_pos_before)
+		update_translate_correct_cursor(c, cursor_pos_before)
 		break
 	}
 	case Mode.Move: {
 
-		if (!c.mouse_down) {
+		if (!c.pointer_0_down) {
 			c.mode = Mode.Init
 			return update_canvas_gestures(c)
 		}
@@ -316,7 +327,7 @@ export function update_canvas_gestures(c) {
 
 		let node = /** @type {force.Node} */(c.drag_node)
 
-		if (!c.mouse_down) {
+		if (!c.pointer_0_down) {
 			c.mode       = Mode.Init
 			c.drag_node  = null
 			c.drag_vel.x = 0
@@ -325,11 +336,11 @@ export function update_canvas_gestures(c) {
 			return update_canvas_gestures(c)
 		}
 
-		let mouse_pos_before = pos_window_to_graph(c, c.mouse)
+		let cursor_pos_before = get_cursor_graph_pos(c)
 		update_scale(c)
-		update_translate_correct_cursor(c, mouse_pos_before)
+		update_translate_correct_cursor(c, cursor_pos_before)
 
-		let target = pos_window_to_graph(c, c.mouse)
+		let target = get_cursor_graph_pos(c)
 
 		c.drag_vel.x *= c.drag_inertia
 		c.drag_vel.y *= c.drag_inertia
@@ -342,17 +353,19 @@ export function update_canvas_gestures(c) {
 			y: node.pos.y + c.drag_vel.y,
 		})
 
+		// TODO: keep the momentum after release
+
 		break
 	}
 	}
 
 	log_el.innerHTML = 
-		"mode        = "+c.mode+"\n"+
-		"mouse       = "+ctx2d.vec_string(c.mouse)+"\n"+
-		"mouse_graph = "+ctx2d.vec_string(pos_window_to_graph(c, c.mouse))+"\n"+
-		"wheel_delta = "+ctx2d.num_string(c.wheel_delta)+"\n"+
-		"scale       = "+ctx2d.num_string(c.scale)+"\n"+
-		"pos         = "+ctx2d.vec_string(c.pos)
+		`mode        = ${c.mode}\n`+
+		`pointer[0]  = (${c.pointer_0_id}, ${c.pointer_0_down}, ${ctx2d.vec_string(c.pointer_0_pos)}\n`+
+		`pointer[1]  = (${c.pointer_1_id}, ${c.pointer_1_down}, ${ctx2d.vec_string(c.pointer_1_pos)}\n`+
+		`wheel_delta = ${ctx2d.num_string(c.wheel_delta)}\n`+
+		`scale       = ${ctx2d.num_string(c.scale)}\n`+
+		`pos         = ${ctx2d.vec_string(c.pos)}`
 	
 }
 

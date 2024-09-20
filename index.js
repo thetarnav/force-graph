@@ -99,31 +99,98 @@ function main() {
 	window.addEventListener("resize", () => {
 		fc.update_canvas_rect(c)
 	})
+	document.addEventListener("pointerleave", e => {
+		last_interaction = e.timeStamp
+		if (e.pointerType === "mouse") {
+			switch (e.pointerId) {
+			case c.pointer_0_id:
+				c.pointer_0_id   = 0
+				c.pointer_0_down = false
+				break
+			case c.pointer_1_id:
+				c.pointer_1_id   = 0
+				c.pointer_1_down = false
+				break
+			}
+		}
+	})
 	document.addEventListener("pointermove", e => {
 		last_interaction = e.timeStamp
-		c.mouse.x        = e.clientX
-		c.mouse.y        = e.clientY
+		switch (e.pointerId) {
+		case c.pointer_0_id:
+			c.pointer_0_pos.x = e.clientX
+			c.pointer_0_pos.y = e.clientY
+			break
+		case c.pointer_1_id:
+			c.pointer_1_pos.x = e.clientX
+			c.pointer_1_pos.y = e.clientY
+			break
+		default:
+			switch (0) {
+			case c.pointer_0_id:
+				c.pointer_0_id    = e.pointerId
+				c.pointer_0_pos.x = e.clientX
+				c.pointer_0_pos.y = e.clientY
+				break
+			case c.pointer_1_id:
+				c.pointer_1_id    = e.pointerId
+				c.pointer_1_pos.x = e.clientX
+				c.pointer_1_pos.y = e.clientY
+				break
+			}
+		}
 	})
 	canvas_el.addEventListener("pointerdown", e => {
 		last_interaction = e.timeStamp
-		c.mouse_down     = true
-		c.mouse.x        = e.clientX
-		c.mouse.y        = e.clientY
+		if (e.pointerType === "mouse") {
+			switch (e.pointerId) {
+			case c.pointer_0_id: c.pointer_0_down = true ;break
+			case c.pointer_1_id: c.pointer_1_down = true ;break
+			}
+		} else {
+			switch (0) {
+			case c.pointer_0_id:
+				c.pointer_0_id    = e.pointerId
+				c.pointer_0_down  = true
+				c.pointer_0_pos.x = e.clientX
+				c.pointer_0_pos.y = e.clientY
+				break
+			case c.pointer_1_id:
+				c.pointer_1_id    = e.pointerId
+				c.pointer_1_down  = true
+				c.pointer_1_pos.x = e.clientX
+				c.pointer_1_pos.y = e.clientY
+				break
+			}
+		}
 	})
 	document.addEventListener("pointerup", e => {
 		last_interaction = e.timeStamp
-		c.mouse_down     = false
-		c.mouse.x        = e.clientX
-		c.mouse.y        = e.clientY
+		if (e.pointerType === "mouse") {
+			switch (e.pointerId) {
+			case c.pointer_0_id: c.pointer_0_down = false ;break
+			case c.pointer_1_id: c.pointer_1_down = false ;break
+			}
+		} else {
+			switch (e.pointerId) {
+			case c.pointer_0_id:
+				c.pointer_0_id   = 0
+				c.pointer_0_down = false
+				break
+			case c.pointer_1_id:
+				c.pointer_1_id   = 0
+				c.pointer_1_down = false
+				break
+			}
+		}
 	})
 	canvas_el.addEventListener("wheel", e => {
 		e.preventDefault()
 		last_interaction = e.timeStamp
-		c.mouse.x        = e.clientX
-		c.mouse.y        = e.clientY
 		c.wheel_delta   += e.deltaY/2
 	})
 	canvas_el.addEventListener("click", e => {
+		// TODO: click happens on every pointerup.....
 		if (c.mode === fc.Mode.Drag) {
 			console.log("click", c.drag_node)
 		}
