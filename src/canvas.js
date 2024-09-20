@@ -20,23 +20,25 @@ export const Mode = /** @type {const} */({
 	Move: "MOVE",
 })
 
-class Canvas {
+export class Pointer {
+	id   = 0
+	down = false
+	pos  = new Vec
+}
+
+export class Canvas {
 
 	/* config */
 	drag_inertia  = 0.6
 	drag_strength = 0.25
 
 	/* inputs */
-	canvas_rect    = new Rect
-	window_size    = new la.Size
-	pointer_0_id   = 0 /* zero means no pointer */
-	pointer_1_id   = 0 /* zero means no pointer */
-	pointer_0_pos  = new Vec
-	pointer_1_pos  = new Vec
-	pointer_0_down = false
-	pointer_1_down = false
-	space_down     = false
-	wheel_delta    = 0
+	canvas_rect   = new Rect
+	window_size   = new la.Size
+	pointer_0     = new Pointer
+	pointer_1     = new Pointer
+	space_down    = false
+	wheel_delta   = 0
 	
 	/* state */
 	pos           = new Vec
@@ -151,8 +153,8 @@ export function pos_window_to_graph(c, pos) {
  @param   {Canvas} c
  @returns {Vec}    */
 export function get_cursor_graph_pos(c) {
-	if (c.pointer_0_id !== 0) {
-		return pos_window_to_graph(c, c.pointer_0_pos)
+	if (c.pointer_0.id !== 0) {
+		return pos_window_to_graph(c, c.pointer_0.pos)
 	}
 	return c.pos
 }
@@ -295,7 +297,7 @@ export function update_canvas_gestures(c) {
 		let cursor_pos_before = get_cursor_graph_pos(c)
 		c.hover_node = force.find_closest_node_linear(c.graph, cursor_pos_before, hover_node_radius)
 
-		if (c.pointer_0_down) {
+		if (c.pointer_0.down) {
 			if (c.hover_node) {
 				c.mode             = Mode.Drag
 				c.drag_node        = c.hover_node
@@ -314,7 +316,7 @@ export function update_canvas_gestures(c) {
 	}
 	case Mode.Move: {
 
-		if (!c.pointer_0_down) {
+		if (!c.pointer_0.down) {
 			c.mode = Mode.Init
 			return update_canvas_gestures(c)
 		}
@@ -327,7 +329,7 @@ export function update_canvas_gestures(c) {
 
 		let node = /** @type {force.Node} */(c.drag_node)
 
-		if (!c.pointer_0_down) {
+		if (!c.pointer_0.down) {
 			c.mode       = Mode.Init
 			c.drag_node  = null
 			c.drag_vel.x = 0
@@ -361,8 +363,8 @@ export function update_canvas_gestures(c) {
 
 	log_el.innerHTML = 
 		`mode        = ${c.mode}\n`+
-		`pointer[0]  = (${c.pointer_0_id}, ${c.pointer_0_down}, ${ctx2d.vec_string(c.pointer_0_pos)}\n`+
-		`pointer[1]  = (${c.pointer_1_id}, ${c.pointer_1_down}, ${ctx2d.vec_string(c.pointer_1_pos)}\n`+
+		`pointer[0]  = (${c.pointer_0.id}, ${c.pointer_0.down}, ${ctx2d.vec_string(c.pointer_0.pos)}\n`+
+		`pointer[1]  = (${c.pointer_1.id}, ${c.pointer_1.down}, ${ctx2d.vec_string(c.pointer_1.pos)}\n`+
 		`wheel_delta = ${ctx2d.num_string(c.wheel_delta)}\n`+
 		`scale       = ${ctx2d.num_string(c.scale)}\n`+
 		`pos         = ${ctx2d.vec_string(c.pos)}`

@@ -99,90 +99,68 @@ function main() {
 	window.addEventListener("resize", () => {
 		fc.update_canvas_rect(c)
 	})
-	document.addEventListener("pointerleave", e => {
-		last_interaction = e.timeStamp
-		if (e.pointerType === "mouse") {
-			switch (e.pointerId) {
-			case c.pointer_0_id:
-				c.pointer_0_id   = 0
-				c.pointer_0_down = false
-				break
-			case c.pointer_1_id:
-				c.pointer_1_id   = 0
-				c.pointer_1_down = false
-				break
-			}
-		}
-	})
 	document.addEventListener("pointermove", e => {
 		last_interaction = e.timeStamp
-		switch (e.pointerId) {
-		case c.pointer_0_id:
-			c.pointer_0_pos.x = e.clientX
-			c.pointer_0_pos.y = e.clientY
-			break
-		case c.pointer_1_id:
-			c.pointer_1_pos.x = e.clientX
-			c.pointer_1_pos.y = e.clientY
-			break
-		default:
-			switch (0) {
-			case c.pointer_0_id:
-				c.pointer_0_id    = e.pointerId
-				c.pointer_0_pos.x = e.clientX
-				c.pointer_0_pos.y = e.clientY
-				break
-			case c.pointer_1_id:
-				c.pointer_1_id    = e.pointerId
-				c.pointer_1_pos.x = e.clientX
-				c.pointer_1_pos.y = e.clientY
-				break
-			}
+
+		/** @type {fc.Pointer} */ let p
+		if      (c.pointer_0.id === e.pointerId) p = c.pointer_0
+		else if (c.pointer_1.id === e.pointerId) p = c.pointer_1
+		else if (c.pointer_0.id === 0)           p = c.pointer_0
+		else if (c.pointer_1.id === 0)           p = c.pointer_1
+		else return
+
+		p.id    = e.pointerId
+		p.pos.x = e.x
+		p.pos.y = e.y
+		if (e.pointerType === "touch") {
+			p.down = true
 		}
 	})
 	canvas_el.addEventListener("pointerdown", e => {
 		last_interaction = e.timeStamp
-		if (e.pointerType === "mouse") {
-			switch (e.pointerId) {
-			case c.pointer_0_id: c.pointer_0_down = true ;break
-			case c.pointer_1_id: c.pointer_1_down = true ;break
-			}
-		} else {
-			switch (0) {
-			case c.pointer_0_id:
-				c.pointer_0_id    = e.pointerId
-				c.pointer_0_down  = true
-				c.pointer_0_pos.x = e.clientX
-				c.pointer_0_pos.y = e.clientY
-				break
-			case c.pointer_1_id:
-				c.pointer_1_id    = e.pointerId
-				c.pointer_1_down  = true
-				c.pointer_1_pos.x = e.clientX
-				c.pointer_1_pos.y = e.clientY
-				break
-			}
-		}
+		
+		/** @type {fc.Pointer} */ let p
+		if      (c.pointer_0.id === e.pointerId) p = c.pointer_0
+		else if (c.pointer_1.id === e.pointerId) p = c.pointer_1
+		else if (c.pointer_0.id === 0)           p = c.pointer_0
+		else if (c.pointer_1.id === 0)           p = c.pointer_1
+		else return
+
+		p.id    = e.pointerId
+		p.pos.x = e.x
+		p.pos.y = e.y
+		p.down  = true
 	})
 	document.addEventListener("pointerup", e => {
 		last_interaction = e.timeStamp
-		if (e.pointerType === "mouse") {
-			switch (e.pointerId) {
-			case c.pointer_0_id: c.pointer_0_down = false ;break
-			case c.pointer_1_id: c.pointer_1_down = false ;break
-			}
-		} else {
-			switch (e.pointerId) {
-			case c.pointer_0_id:
-				c.pointer_0_id   = 0
-				c.pointer_0_down = false
-				break
-			case c.pointer_1_id:
-				c.pointer_1_id   = 0
-				c.pointer_1_down = false
-				break
-			}
+
+		/** @type {fc.Pointer} */ let p
+		if      (c.pointer_0.id === e.pointerId) p = c.pointer_0
+		else if (c.pointer_1.id === e.pointerId) p = c.pointer_1
+		else return
+
+		p.down = false
+		if (e.pointerType === "touch") {
+			p.id = 0
 		}
+	})
+	document.addEventListener("pointerleave", e => {
+		/** @type {fc.Pointer} */ let p
+		if      (c.pointer_0.id === e.pointerId) p = c.pointer_0
+		else if (c.pointer_1.id === e.pointerId) p = c.pointer_1
+		else return
+
+		p.down = false
+		p.id = 0
+	})
+	document.addEventListener("pointercancel", e => {
+		/** @type {fc.Pointer} */ let p
+		if      (c.pointer_0.id === e.pointerId) p = c.pointer_0
+		else if (c.pointer_1.id === e.pointerId) p = c.pointer_1
+		else return
+
+		p.down = false
+		p.id = 0
 	})
 	canvas_el.addEventListener("wheel", e => {
 		e.preventDefault()
