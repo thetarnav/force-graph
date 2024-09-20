@@ -491,15 +491,8 @@ export function draw_nodes(c, clip_margin = {x: 100, y: 20}) {
 			}
 			/* FAR AWAY */
 			else {
-				c.ctx.scale(s, s)
-				c.ctx.moveTo(x/s, y/s)
-				c.ctx.ellipse(
-					x/s, y/s,
-					radius, radius,
-					0, 0,
-					math.TAU,
-				)
-				c.ctx.scale(1/s, 1/s)
+				c.ctx.moveTo(x, y)
+				c.ctx.arc(x, y, radius*s, 0, math.TAU)
 			}
 		}
 	}
