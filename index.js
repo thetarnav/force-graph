@@ -148,44 +148,37 @@ function main() {
 		p.pos.y = e.clientY
 		p.down  = true
 	})
+	/** @param {PointerEvent} e */
+	function remove_pointer(e) {
+		switch (e.pointerId) {
+		case c.pointer_0.id:
+			c.pointer_0.down = false
+			c.pointer_0.id   = 0
+			break
+		case c.pointer_1.id:
+			c.pointer_1.down = false
+			c.pointer_1.id   = 0
+			break
+		}
+	}
 	document.addEventListener("pointerup", e => {
-		last_interaction = e.timeStamp
-
-		/** @type {fc.Pointer} */ let p
-		if      (c.pointer_0.id === e.pointerId) p = c.pointer_0
-		else if (c.pointer_1.id === e.pointerId) p = c.pointer_1
-		else return
-
-		p.down = false
 		if (e.pointerType === "touch") {
-			p.id = 0
+			remove_pointer(e)
+		} else {
+			switch (e.pointerId) {
+			case c.pointer_0.id: c.pointer_0.down = false; break
+			case c.pointer_1.id: c.pointer_1.down = false; break
+			}
 		}
 	})
-	document.addEventListener("pointerleave", e => {
-		/** @type {fc.Pointer} */ let p
-		if      (c.pointer_0.id === e.pointerId) p = c.pointer_0
-		else if (c.pointer_1.id === e.pointerId) p = c.pointer_1
-		else return
-
-		p.down = false
-		p.id = 0
-	})
-	document.addEventListener("pointercancel", e => {
-		/** @type {fc.Pointer} */ let p
-		if      (c.pointer_0.id === e.pointerId) p = c.pointer_0
-		else if (c.pointer_1.id === e.pointerId) p = c.pointer_1
-		else return
-
-		p.down = false
-		p.id = 0
-	})
+	document.addEventListener("pointerleave", remove_pointer)
+	document.addEventListener("pointercancel", remove_pointer)
 	canvas_el.addEventListener("wheel", e => {
 		e.preventDefault()
 		last_interaction = e.timeStamp
 		c.wheel_delta   += e.deltaY/2
 	})
 	canvas_el.addEventListener("click", e => {
-		// TODO: click happens on every pointerup.....
 		if (c.mode === fc.Mode.Drag) {
 			console.log("click", c.drag_node)
 		}

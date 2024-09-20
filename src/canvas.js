@@ -219,8 +219,6 @@ export function update_translate(c) {
 	set_translate(c, c.pos)
 }
 
-// TODO: do we need so many set_translate procs? so far it's only used once
-
 /**
  Make sure the anchor is under the cursor
  @param {Canvas} c
@@ -383,8 +381,6 @@ export function update_canvas_gestures(c) {
 			x: node.pos.x + c.drag_vel.x,
 			y: node.pos.y + c.drag_vel.y,
 		})
-
-		// TODO: keep the momentum after release
 
 		break
 	}
