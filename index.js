@@ -1,7 +1,8 @@
-import * as fg   from "./src/force.js"
-import * as fc   from "./src/canvas.js"
-import * as la   from "./src/linalg.js"
-import * as math from "./src/math.js"
+import * as fg    from "./src/force.js"
+import * as fc    from "./src/canvas.js"
+import * as la    from "./src/linalg.js"
+import * as math  from "./src/math.js"
+import * as ctx2d from "./src/ctx2d.js"
 
 import raw_data from "./data.json" with {type: "json"}
 
@@ -47,6 +48,13 @@ export function get_graph_from_data() {
 	return g
 }
 
+
+let log_el = document.body.appendChild(document.createElement("pre"))
+log_el.style.position      = "fixed"
+log_el.style.top           = "10px"
+log_el.style.left          = "10px"
+log_el.style.pointerEvents = "none"
+
 function main() {
 	const canvas_el = /** @type {HTMLCanvasElement} */ (document.getElementById("canvas"))
 
@@ -88,8 +96,17 @@ function main() {
 				
 				fc.draw_canvas_default(c)
 			}
+
+			log_el.innerHTML = 
+				`fps         = ${1000/(time-prev_time)}\n`+
+				`mode        = ${c.mode}\n`+
+				`pointer[0]  = (${c.pointer_0.id}, ${c.pointer_0.down}, ${ctx2d.vec_string(fc.pos_window_to_graph(c, c.pointer_0.pos))}\n`+
+				`pointer[1]  = (${c.pointer_1.id}, ${c.pointer_1.down}, ${ctx2d.vec_string(fc.pos_window_to_graph(c, c.pointer_1.pos))}\n`+
+				`wheel_delta = ${ctx2d.num_string(c.wheel_delta)}\n`+
+				`scale       = ${ctx2d.num_string(c.scale)}\n`+
+				`pos         = ${ctx2d.vec_string(c.pos)}`
 			
-			// prev_time = time
+			prev_time = time
 			void requestAnimationFrame(frame)
 		}
 		void requestAnimationFrame(frame)

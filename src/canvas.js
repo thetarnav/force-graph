@@ -389,21 +389,7 @@ export function update_canvas_gestures(c) {
 		break
 	}
 	}
-
-	log_el.innerHTML = 
-		`mode        = ${c.mode}\n`+
-		`pointer[0]  = (${c.pointer_0.id}, ${c.pointer_0.down}, ${ctx2d.vec_string(pos_window_to_rvec(c, c.pointer_0.pos))}\n`+
-		`pointer[1]  = (${c.pointer_1.id}, ${c.pointer_1.down}, ${ctx2d.vec_string(pos_window_to_rvec(c, c.pointer_1.pos))}\n`+
-		`wheel_delta = ${ctx2d.num_string(c.wheel_delta)}\n`+
-		`scale       = ${ctx2d.num_string(c.scale)}\n`+
-		`pos         = ${ctx2d.vec_string(c.pos)}`
-	
 }
-
-let log_el = document.body.appendChild(document.createElement("pre"))
-log_el.style.position = "fixed"
-log_el.style.top  = "10px"
-log_el.style.left = "10px"
 
 /**
  @param {Canvas} c 
