@@ -99,7 +99,6 @@ function main() {
 
 			log_el.innerHTML = 
 				`fps         = ${1000/(time-prev_time)}\n`+
-				`mode        = ${c.mode}\n`+
 				`pointers    = ${c.pointers.map((e, i) => (
 					(i > 0 ? "\n              " : "") +
 					`(${e.pointerId}, ${e.buttons}, ${ctx2d.vec_string(fc.pos_window_to_graph(c, la.vec_from_event_client(e)))})`
@@ -161,9 +160,9 @@ function main() {
 		c.wheel_delta   += e.deltaY/2
 	})
 	canvas_el.addEventListener("click", e => {
-		if (c.mode === fc.Mode.Drag) {
-			console.log("click", c.drag_node)
-		}
+		// if (c.mode === fc.Mode.Drag) {
+		// 	console.log("click", c.drag_node)
+		// }
 	})
 	document.addEventListener("keydown", e => {
 		last_interaction = e.timeStamp
