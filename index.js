@@ -100,8 +100,10 @@ function main() {
 			log_el.innerHTML = 
 				`fps         = ${1000/(time-prev_time)}\n`+
 				`mode        = ${c.mode}\n`+
-				`pointer[0]  = (${c.pointer_0.id}, ${c.pointer_0.down}, ${ctx2d.vec_string(fc.pos_window_to_graph(c, c.pointer_0.pos))}\n`+
-				`pointer[1]  = (${c.pointer_1.id}, ${c.pointer_1.down}, ${ctx2d.vec_string(fc.pos_window_to_graph(c, c.pointer_1.pos))}\n`+
+				`pointers    = ${c.pointers.map((e, i) => (
+					(i > 0 ? "\n              " : "") +
+					`(${e.pointerId}, ${e.buttons}, ${ctx2d.vec_string(fc.pos_window_to_graph(c, la.vec_from_event_client(e)))})`
+				))}\n`+
 				`wheel_delta = ${ctx2d.num_string(c.wheel_delta)}\n`+
 				`scale       = ${ctx2d.num_string(c.scale)}\n`+
 				`pos         = ${ctx2d.vec_string(c.pos)}`
@@ -116,63 +118,43 @@ function main() {
 	window.addEventListener("resize", () => {
 		fc.update_canvas_rect(c)
 	})
-	document.addEventListener("pointermove", e => {
+
+	/** @param {PointerEvent} e */
+	function upsert_pointer(e) {
 		last_interaction = e.timeStamp
 
-		/** @type {fc.Pointer} */ let p
-		if      (c.pointer_0.id === e.pointerId) p = c.pointer_0
-		else if (c.pointer_1.id === e.pointerId) p = c.pointer_1
-		else if (c.pointer_0.id === 0)           p = c.pointer_0
-		else if (c.pointer_1.id === 0)           p = c.pointer_1
-		else return
-
-		p.id    = e.pointerId
-		p.pos.x = e.clientX
-		p.pos.y = e.clientY
-		if (e.pointerType === "touch") {
-			p.down = true
+		for (let i = 0; i < c.pointers.length; i++) {
+			let p = c.pointers[i]
+			if (p.pointerId === e.pointerId) {
+				c.pointers[i] = e
+				return
+			}
 		}
-	})
-	canvas_el.addEventListener("pointerdown", e => {
-		last_interaction = e.timeStamp
-		
-		/** @type {fc.Pointer} */ let p
-		if      (c.pointer_0.id === e.pointerId) p = c.pointer_0
-		else if (c.pointer_1.id === e.pointerId) p = c.pointer_1
-		else if (c.pointer_0.id === 0)           p = c.pointer_0
-		else if (c.pointer_1.id === 0)           p = c.pointer_1
-		else return
-
-		p.id    = e.pointerId
-		p.pos.x = e.clientX
-		p.pos.y = e.clientY
-		p.down  = true
-	})
+		c.pointers.push(e)
+	}
 	/** @param {PointerEvent} e */
 	function remove_pointer(e) {
-		switch (e.pointerId) {
-		case c.pointer_0.id:
-			c.pointer_0.down = false
-			c.pointer_0.id   = 0
-			break
-		case c.pointer_1.id:
-			c.pointer_1.down = false
-			c.pointer_1.id   = 0
-			break
+		last_interaction = e.timeStamp
+
+		for (let i = 0; i < c.pointers.length; i++) {
+			if (c.pointers[i].pointerId === e.pointerId) {
+				c.pointers.splice(i, 1)
+				return
+			}
 		}
 	}
+	document.addEventListener("pointermove", upsert_pointer)
+	canvas_el.addEventListener("pointerdown", upsert_pointer)
 	document.addEventListener("pointerup", e => {
 		if (e.pointerType === "touch") {
 			remove_pointer(e)
 		} else {
-			switch (e.pointerId) {
-			case c.pointer_0.id: c.pointer_0.down = false; break
-			case c.pointer_1.id: c.pointer_1.down = false; break
-			}
+			upsert_pointer(e)
 		}
 	})
 	document.addEventListener("pointerleave", remove_pointer)
 	document.addEventListener("pointercancel", remove_pointer)
+
 	canvas_el.addEventListener("wheel", e => {
 		e.preventDefault()
 		last_interaction = e.timeStamp

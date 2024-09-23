@@ -72,6 +72,25 @@ export function xy_hash(x, y) {
 export function vec_hash(vec) {
     return (vec.x*73856093) ^ (vec.y*19349663)
 }
+/**
+ @param   {MouseEvent | PointerEvent} e
+ @returns {Vec2} */
+export function vec_from_event_client(e) {
+	var v = new Vec2()
+	v.x = e.clientX
+	v.y = e.clientY
+	return v
+}
+/**
+ @param   {Size} size
+ @returns {Vec2} */
+export function vec_from_size(size) {
+	var v = new Vec2()
+	v.x = size.w
+	v.y = size.h
+	return v
+}
+export const size_to_vec = vec_from_size
 
 /**
  @param   {Vec2} a

@@ -20,40 +20,37 @@ export const Mode = /** @type {const} */({
 	Move: "MOVE",
 })
 
-export class Pointer {
-	id   = 0
-	down = false
-	pos  = new Vec
-}
-
 export class Canvas {
 
 	/* config */
-	drag_inertia  = 0.6
-	drag_strength = 0.25
+	drag_inertia     = 0.6
+	drag_strength    = 0.25
 
 	/* inputs */
-	canvas_rect   = new Rect
-	window_size   = new la.Size
-	pointer_0     = new Pointer
-	pointer_1     = new Pointer
-	space_down    = false
-	wheel_delta   = 0
+	canvas_rect      = new Rect
+	window_size      = new la.Size
+	pointers         = /** @type {PointerEvent[]} */([])
+	space_down       = false
+	wheel_delta      = 0
 	
 	/* state */
-	pos           = new Vec
-	scale         = 2
-	scale_min     = 0
-	scale_max     = 7
+	pos              = new Vec
+	
+	scale            = 2
+	scale_min        = 0
+	scale_max        = 7
+	
 	pinch_init_ratio = 0
 	pinch_init_scale = 0
 
 	/* mode state */
-	mode          = /**@type {Mode}*/(Mode.Init)
-	hover_node    = /**@type {force.Node?}*/(null)
-	drag_node     = /**@type {force.Node?}*/(null)
-	drag_vel      = new Vec
-	move_init_pos = new Vec
+	mode             = /**@type {Mode}*/(Mode.Init)
+	hover_node       = /**@type {force.Node?}*/(null)
+	drag_node        = /**@type {force.Node?}*/(null)
+	drag_vel         = new Vec
+	drag_pointer_id  = 0
+	move_init_pos    = new Vec
+	move_pointer_id  = 0
 	
 	constructor(
 		/**@type {Ctx2D}*/       ctx,
@@ -152,16 +149,6 @@ export function pos_window_to_graph(c, pos) {
 }
 
 /**
- @param   {Canvas} c
- @returns {Vec}    */
-export function get_cursor_graph_pos(c) {
-	if (c.pointer_0.id !== 0) {
-		return pos_window_to_graph(c, c.pointer_0.pos)
-	}
-	return c.pos
-}
-
-/**
  @param   {Canvas} c 
  @returns {Vec}    */
 export function get_canvas_translate(c) {
@@ -222,14 +209,13 @@ export function update_translate(c) {
 /**
  Make sure the anchor is under the cursor
  @param {Canvas} c
- @param {Vec}    anchor
+ @param {Vec}    before
+ @param {Vec}    after
 */
-export function update_translate_correct_cursor(c, anchor) {
-
-	let cursor_pos = get_cursor_graph_pos(c)
+export function update_correct_translate(c, before, after) {
 	set_translate_xy(c,
-		c.pos.x - (cursor_pos.x-anchor.x),
-		c.pos.y - (cursor_pos.y-anchor.y),
+		c.pos.x - (after.x-before.x),
+		c.pos.y - (after.y-before.y),
 	)
 }
 
@@ -289,10 +275,10 @@ function update_scale(c) {
 	/*
 	MULTI TOUCH - PINCH SCALING
 	*/
-	if (c.pointer_1.down && c.pointer_0.down) {
+	if (c.pointers.length >= 2 && c.pointers[0].buttons > 0 && c.pointers[1].buttons > 0) {
 
-		let r0    = pos_window_to_rvec(c, c.pointer_0.pos)
-		let r1    = pos_window_to_rvec(c, c.pointer_1.pos)
+		let r0    = pos_window_to_rvec(c, la.vec_from_event_client(c.pointers[0]))
+		let r1    = pos_window_to_rvec(c, la.vec_from_event_client(c.pointers[1]))
 		let ratio = la.vec_distance(r0, r1)
 
 		if (c.pinch_init_ratio !== 0) {
@@ -317,72 +303,116 @@ function update_scale(c) {
  * @returns {void}   */
 export function update_canvas_gestures(c) {
 	
-	switch (c.mode) {
+	modes: switch (c.mode) {
 	case Mode.Init: {
 		
 		let hover_node_radius = get_pointer_node_radius(c)
-		let cursor_pos_before = get_cursor_graph_pos(c)
-		c.hover_node = force.find_closest_node_linear(c.graph, cursor_pos_before, hover_node_radius)
 
-		if (c.pointer_0.down) {
-			if (c.hover_node) {
-				c.mode             = Mode.Drag
-				c.drag_node        = c.hover_node
-				c.drag_node.anchor = true
-				c.hover_node       = null
+		for (let i = 0; i < c.pointers.length; i++) {
+			let p = c.pointers[i]
+			
+			if (p.buttons > 0) {
+				let cursor = pos_window_to_graph(c, la.vec_from_event_client(p))
+				let node   = force.find_closest_node_linear(c.graph, cursor, hover_node_radius)
+
+				if (node) {
+					c.mode             = Mode.Drag
+					c.drag_node        = node
+					c.drag_node.anchor = true
+					c.drag_pointer_id  = p.pointerId
+				} else {
+					c.mode             = Mode.Move
+					c.move_init_pos    = cursor
+					c.move_pointer_id  = p.pointerId
+				}
 				return update_canvas_gestures(c)
 			}
-			c.mode = Mode.Move
-			c.move_init_pos = cursor_pos_before
-			return update_canvas_gestures(c)
 		}
 
+		let before = c.pointers.length > 0
+			? pos_window_to_graph(c, la.vec_from_event_client(c.pointers[0]))
+			: pos_window_to_graph(c, la.vec_from_size(c.window_size))
+
+		c.hover_node = force.find_closest_node_linear(c.graph, before, hover_node_radius)
+	
 		update_scale(c)
-		update_translate_correct_cursor(c, cursor_pos_before)
+
+		let after = c.pointers.length > 0
+			? pos_window_to_graph(c, la.vec_from_event_client(c.pointers[0]))
+			: pos_window_to_graph(c, la.vec_from_size(c.window_size))
+
+		update_correct_translate(c, before, after)
 		break
 	}
 	case Mode.Move: {
 
-		if (!c.pointer_0.down) {
-			c.mode = Mode.Init
-			return update_canvas_gestures(c)
+		/* is the move pointer is still pressed? */
+		for (let p of c.pointers) {
+			if (p.pointerId === c.move_pointer_id && p.buttons > 0) {
+				update_scale(c)
+				update_correct_translate(c, c.move_init_pos, pos_window_to_graph(c, la.vec_from_event_client(p)))
+				break modes
+			}
 		}
 
-		update_scale(c)
-		update_translate_correct_cursor(c, c.move_init_pos)
-		break
+		/*
+		 find another pointer for moving.
+		 this avoids going through Init mode and testing for node drag
+		*/
+		for (let p of c.pointers) {
+			if (p.buttons > 0) {
+				c.move_init_pos   = pos_window_to_graph(c, la.vec_from_event_client(p))
+				c.move_pointer_id = p.pointerId
+				return update_canvas_gestures(c)
+			}
+		}
+
+		c.mode            = Mode.Init
+		c.move_pointer_id = 0
+		return update_canvas_gestures(c)
 	}
 	case Mode.Drag: {
 
 		let node = /** @type {force.Node} */(c.drag_node)
 
-		if (!c.pointer_0.down) {
-			c.mode       = Mode.Init
-			c.drag_node  = null
-			c.drag_vel.x = 0
-			c.drag_vel.y = 0
-			node.anchor  = false
-			return update_canvas_gestures(c)
+		for (let e of c.pointers) {
+			if (e.pointerId === c.drag_pointer_id && e.buttons > 0) {
+
+				let before = c.pointers.length > 0
+					? pos_window_to_graph(c, la.vec_from_event_client(c.pointers[0]))
+					: pos_window_to_graph(c, la.vec_from_size(c.window_size))
+				
+				update_scale(c)
+
+				let after = c.pointers.length > 0
+					? pos_window_to_graph(c, la.vec_from_event_client(c.pointers[0]))
+					: pos_window_to_graph(c, la.vec_from_size(c.window_size))
+
+				update_correct_translate(c, before, after)
+
+				let target = pos_window_to_graph(c, la.vec_from_event_client(e))
+
+				c.drag_vel.x *= c.drag_inertia
+				c.drag_vel.y *= c.drag_inertia
+
+				c.drag_vel.x += (target.x-node.pos.x) * c.drag_strength
+				c.drag_vel.y += (target.y-node.pos.y) * c.drag_strength
+
+				force.set_position(c.graph, node, {
+					x: node.pos.x + c.drag_vel.x,
+					y: node.pos.y + c.drag_vel.y,
+				})
+
+				break modes
+			}
 		}
 
-		let cursor_pos_before = get_cursor_graph_pos(c)
-		update_scale(c)
-		update_translate_correct_cursor(c, cursor_pos_before)
-
-		let target = get_cursor_graph_pos(c)
-
-		c.drag_vel.x *= c.drag_inertia
-		c.drag_vel.y *= c.drag_inertia
-
-		c.drag_vel.x += (target.x-node.pos.x) * c.drag_strength
-		c.drag_vel.y += (target.y-node.pos.y) * c.drag_strength
-
-		force.set_position(c.graph, node, {
-			x: node.pos.x + c.drag_vel.x,
-			y: node.pos.y + c.drag_vel.y,
-		})
-
-		break
+		c.mode       = Mode.Init
+		c.drag_node  = null
+		c.drag_vel.x = 0
+		c.drag_vel.y = 0
+		node.anchor  = false
+		return update_canvas_gestures(c)
 	}
 	}
 }
