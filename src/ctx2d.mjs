@@ -1,4 +1,4 @@
-import * as la from "./linalg.js"
+import * as la from "./linalg.mjs"
 
 const Vec = la.Vec2
 const vec = la.vec2

@@ -1,6 +1,6 @@
-import * as la    from "./linalg.js"
-import * as math  from "./math.js"
-import * as array from "./array.js"
+import * as la    from "./linalg.mjs"
+import * as math  from "./math.mjs"
+import * as array from "./array.mjs"
 
 const Vec = la.Vec2
 const vec = la.vec2

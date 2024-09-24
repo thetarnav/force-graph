@@ -1,8 +1,8 @@
-import * as fg    from "./src/force.js"
-import * as fc    from "./src/canvas.js"
-import * as la    from "./src/linalg.js"
-import * as math  from "./src/math.js"
-import * as ctx2d from "./src/ctx2d.js"
+import * as fg    from "./src/force.mjs"
+import * as fc    from "./src/canvas.mjs"
+import * as la    from "./src/linalg.mjs"
+import * as math  from "./src/math.mjs"
+import * as ctx2d from "./src/ctx2d.mjs"
 
 import raw_data from "./data.json" with {type: "json"}
 

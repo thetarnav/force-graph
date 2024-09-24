@@ -1,4 +1,4 @@
-import * as math from "./math.js"
+import * as math from "./math.mjs"
 
 export const TAU    = 6.283185307179586
 export const PI     = Math.PI

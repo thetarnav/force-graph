@@ -8,6 +8,7 @@ export interface Readonly_Arraylike<T> {
 	readonly [Symbol.iterator]: () => IterableIterator<number>
 	readonly [index: number]: T
 }
+
 export type Num_Arraylike          = Arraylike<number>
 export type Readonly_Num_Arraylike = Readonly_Arraylike<number>
 

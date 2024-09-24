@@ -1,7 +1,7 @@
-import * as la    from "./linalg.js"
-import * as math  from "./math.js"
-import * as force from "./force.js"
-import * as ctx2d from "./ctx2d.js"
+import * as la    from "./linalg.mjs"
+import * as math  from "./math.mjs"
+import * as force from "./force.mjs"
+import * as ctx2d from "./ctx2d.mjs"
 
 const Vec = la.Vec2
 const vec = la.vec2
