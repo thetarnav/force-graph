@@ -328,9 +328,6 @@ export function update_canvas_gestures(c) {
 			? pos_window_to_graph(c, la.vec_from_event_client(c.pointers[0]))
 			: pos_window_to_graph(c, la.vec_from_size(c.window_size))
 
-	// TODO: only hover while not dragging or moving
-	c.hover_node = force.find_closest_node_linear(c.graph, before, hover_node_radius)
-
 	/*
 	WHEEL SCROLLING
 	*/
@@ -401,6 +398,18 @@ export function update_canvas_gestures(c) {
 		c.pos.x - (after.x-before.x),
 		c.pos.y - (after.y-before.y),
 	)
+
+	/*
+	HOVER
+	*/
+	c.hover_node = null
+	for (let p of c.pointers) {
+		if (p.buttons === 0) {
+			let pos = pos_window_to_graph(c, la.vec_from_event_client(p))
+			c.hover_node = force.find_closest_node_linear(c.graph, pos, hover_node_radius)
+			break
+		}
+	}
 }
 
 /**
