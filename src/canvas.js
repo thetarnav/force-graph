@@ -13,6 +13,8 @@ const rect = la.rect
 
 /** @typedef {CanvasRenderingContext2D} Ctx2D */
 
+/** @typedef {"move" | "drag" | "pinch"} Pointer_Kind */
+
 export class Canvas {
 
 	/* config */
@@ -34,16 +36,20 @@ export class Canvas {
 	scale_max        = 7
 
 	hover_node       = /**@type {force.Node?}*/(null)
+
+	/** @type {Record<Pointer_Kind, number>} */
+	pointer_ids = {
+		move:  0,
+		drag:  0,
+		pinch: 0,
+	}
 	
 	pinch_init_ratio = 0
 	pinch_init_scale = 0
-	pinch_pointer_id = 0
 
 	drag_node        = /**@type {force.Node?}*/(null)
 	drag_vel         = new Vec
-	drag_pointer_id  = 0
 
-	move_pointer_id  = 0
 	move_init_pos    = new Vec
 	
 	constructor(
@@ -53,6 +59,35 @@ export class Canvas {
 		this.ctx   = ctx
 		this.graph = graph
 	}
+}
+
+/**
+ @param   {Canvas}       c 
+ @param   {Pointer_Kind} kind
+ @returns {PointerEvent?} */
+function get_pointer(c, kind) {
+	if (c.pointer_ids[kind] !== 0) {
+		for (let p of c.pointers) {
+			if (p.pointerId === c.pointer_ids[kind] && p.buttons > 0) {
+				return p
+			}
+		}
+		c.pointer_ids[kind] = 0
+	}
+	return null
+}
+/**
+ @param   {Canvas} c
+ @returns {PointerEvent?} */
+function get_unassigned_pressed_pointer(c) {
+	for (let p of c.pointers) {
+		if (p.buttons > 0 && p.pointerId !== c.pointer_ids.drag &&
+		                     p.pointerId !== c.pointer_ids.move &&
+		                     p.pointerId !== c.pointer_ids.pinch) {
+			return p
+		}
+	}
+	return null
 }
 
 /**
@@ -229,9 +264,10 @@ export function update_canvas_gestures(c) {
 	/*
 	DRAG
 	*/
-	drag: if (c.drag_pointer_id === 0) {
+	if (c.pointer_ids.drag === 0) {
 		for (let p of c.pointers) {
-			if (p.buttons === 0 || c.move_pointer_id === p.pointerId || c.pinch_pointer_id === p.pointerId)
+			if (p.buttons === 0 || c.pointer_ids.move  === p.pointerId ||
+			                       c.pointer_ids.pinch === p.pointerId)
 				continue
 			
 			let cursor = pos_window_to_graph(c, la.vec_from_event_client(p))
@@ -240,89 +276,59 @@ export function update_canvas_gestures(c) {
 			if (node) {
 				c.drag_node        = node
 				c.drag_node.anchor = true
-				c.drag_pointer_id  = p.pointerId
-				return update_canvas_gestures(c)
+				c.pointer_ids.drag = p.pointerId
 			}
 		}
 	}
-	else {
+
+	if (c.pointer_ids.drag !== 0) {
+		let p    = get_pointer(c, "drag")
 		let node = /** @type {force.Node} */(c.drag_node)
-
-		/* is the drag pointer is still pressed? */
-		for (let e of c.pointers) {
-			if (e.pointerId === c.drag_pointer_id && e.buttons > 0) {
-				
-				let target = pos_window_to_graph(c, la.vec_from_event_client(e))
-
-				c.drag_vel.x *= c.drag_inertia
-				c.drag_vel.y *= c.drag_inertia
-
-				c.drag_vel.x += (target.x-node.pos.x) * c.drag_strength
-				c.drag_vel.y += (target.y-node.pos.y) * c.drag_strength
-
-				force.set_position(c.graph, node, {
-					x: node.pos.x + c.drag_vel.x,
-					y: node.pos.y + c.drag_vel.y,
-				})
-
-				break drag
-			}
+	
+		if (p) {
+			let target = pos_window_to_graph(c, la.vec_from_event_client(p))
+	
+			c.drag_vel.x *= c.drag_inertia
+			c.drag_vel.y *= c.drag_inertia
+	
+			c.drag_vel.x += (target.x-node.pos.x) * c.drag_strength
+			c.drag_vel.y += (target.y-node.pos.y) * c.drag_strength
+	
+			force.set_position(c.graph, node, {
+				x: node.pos.x + c.drag_vel.x,
+				y: node.pos.y + c.drag_vel.y,
+			})
+		} else {
+			node.anchor  = false
+			c.drag_node  = null
+			c.drag_vel.x = 0
+			c.drag_vel.y = 0
 		}
-
-		node.anchor       = false
-		c.drag_node       = null
-		c.drag_vel.x      = 0
-		c.drag_vel.y      = 0
-		c.drag_pointer_id = 0
-		return update_canvas_gestures(c)
 	}
 
 	/*
 	MOVE
 	*/
-	move: if (c.move_pointer_id === 0) {
-		for (let p of c.pointers) {
-			if (p.buttons === 0 || c.drag_pointer_id === p.pointerId || c.pinch_pointer_id === p.pointerId)
-				continue
-			
-			let cursor = pos_window_to_graph(c, la.vec_from_event_client(p))
-			
-			c.move_init_pos   = cursor
-			c.move_pointer_id = p.pointerId
-			return update_canvas_gestures(c)
+	if (c.pointer_ids.move === 0) {
+		let p = get_unassigned_pressed_pointer(c)
+		if (p) {
+			c.pointer_ids.move = p.pointerId
+			c.move_init_pos    = pos_window_to_graph(c, la.vec_from_event_client(p))
 		}
 	}
-	else {
-		/* is the move pointer is still pressed? */
-		for (let p of c.pointers) {
-			if (p.pointerId === c.move_pointer_id && p.buttons > 0) {
-				break move
-			}
-		}
 
-		/*
-		 find another pointer for moving.
-		 this avoids going through Init mode and testing for node drag
-		*/
-		for (let p of c.pointers) {
-			if (p.buttons > 0 && !(c.drag_pointer_id === p.pointerId || c.pinch_pointer_id === p.pointerId)) {
-				c.move_init_pos   = pos_window_to_graph(c, la.vec_from_event_client(p))
-				c.move_pointer_id = p.pointerId
-				return update_canvas_gestures(c)
-			}
-		}
+	let move_p = get_pointer(c, "move")
 
-		c.move_pointer_id = 0
-		return update_canvas_gestures(c)
-	}
-
-
-	let before = c.move_pointer_id !== 0
+	/*
+	SELECT CURSOR POSITION
+	*/
+	let before = move_p !== null
 		? c.move_init_pos
 		: c.pointers.length > 0
 			? pos_window_to_graph(c, la.vec_from_event_client(c.pointers[0]))
 			: pos_window_to_graph(c, la.vec_from_size(c.window_size))
 
+	// TODO: only hover while not dragging or moving
 	c.hover_node = force.find_closest_node_linear(c.graph, before, hover_node_radius)
 
 	/*
@@ -357,48 +363,24 @@ export function update_canvas_gestures(c) {
 	/*
 	MULTI TOUCH - PINCH SCALING
 	*/
-	multi_touch: {
-		if (c.move_pointer_id !== 0) {
+	let pinch_p = get_pointer(c, "pinch") ?? get_unassigned_pressed_pointer(c)
+	if (move_p && pinch_p) {
+		c.pointer_ids.pinch = pinch_p.pointerId
 
-			if (c.pinch_pointer_id === 0) {
-				for (let p of c.pointers) {
-					if (p.pointerId !== c.move_pointer_id && p.pointerId !== c.drag_pointer_id && p.buttons > 0) {
-						c.pinch_pointer_id = p.pointerId
-						break
-					}
-				}
-			}
-			
-			if (c.pinch_pointer_id !== 0) {
-				/** @type {Vec?} */ let move_r  = null
-				/** @type {Vec?} */ let pinch_r = null
+		let move_r  = pos_window_to_rvec(c, la.vec_from_event_client(move_p))
+		let pinch_r = pos_window_to_rvec(c, la.vec_from_event_client(pinch_p))
+		let ratio   = la.vec_distance(move_r, pinch_r)
 
-				for (let p of c.pointers) {
-					switch (p.pointerId) {
-					case c.move_pointer_id:  move_r  = pos_window_to_rvec(c, la.vec_from_event_client(p)) ;break
-					case c.pinch_pointer_id: pinch_r = pos_window_to_rvec(c, la.vec_from_event_client(p)) ;break
-					}
-				}
-
-				if (pinch_r && move_r) {
-					let ratio = la.vec_distance(move_r, pinch_r)
-			
-					if (c.pinch_init_ratio !== 0) {
-						c.scale = c.pinch_init_scale*(ratio/c.pinch_init_ratio)
-					} else {
-						c.pinch_init_ratio = ratio
-						c.pinch_init_scale = c.scale
-					}
-
-					break multi_touch // success
-				}
-			}
+		if (c.pinch_init_ratio !== 0) {
+			c.scale = c.pinch_init_scale*(ratio/c.pinch_init_ratio)
+		} else {
+			c.pinch_init_ratio = ratio
+			c.pinch_init_scale = c.scale
 		}
-
-		// exit
-		c.pinch_pointer_id = 0
-		c.pinch_init_ratio = 0
-		c.pinch_init_scale = 0
+	} else {
+		c.pointer_ids.pinch = 0
+		c.pinch_init_ratio  = 0
+		c.pinch_init_scale  = 0
 	}
 
 	/*
@@ -406,21 +388,14 @@ export function update_canvas_gestures(c) {
 	*/
 	c.scale = math.clamp(c.scale, 1, c.scale_max)
 
-	/** @type {Vec} */
-	let after
-	set_after: {
-		if (c.move_pointer_id !== 0) {
-			for (let p of c.pointers) {
-				if (p.pointerId === c.move_pointer_id) {
-					after = pos_window_to_graph(c, la.vec_from_event_client(p))
-					break set_after
-				}
-			}
-		}
-		after = c.pointers.length > 0
+	/*
+	CORRECT CURSOR POSITION
+	*/
+	let after = move_p
+		? pos_window_to_graph(c, la.vec_from_event_client(move_p))
+		: c.pointers.length > 0
 			? pos_window_to_graph(c, la.vec_from_event_client(c.pointers[0]))
 			: pos_window_to_graph(c, la.vec_from_size(c.window_size))
-	}
 
 	set_translate_xy(c,
 		c.pos.x - (after.x-before.x),
