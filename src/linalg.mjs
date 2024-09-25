@@ -30,10 +30,7 @@ export class Vec2 {
  @param   {number} y 
  @returns {Vec2} */
 export function vec2(x, y) {
-	var v = new Vec2()
-	v.x = x
-	v.y = y
-	return v
+	return {x, y}
 }
 /**
  @param   {Vec2} v
@@ -76,21 +73,8 @@ export function vec_hash(vec) {
  @param   {MouseEvent | PointerEvent} e
  @returns {Vec2} */
 export function vec_from_event_client(e) {
-	var v = new Vec2()
-	v.x = e.clientX
-	v.y = e.clientY
-	return v
+	return {x: e.clientX, y: e.clientY}
 }
-/**
- @param   {Size} size
- @returns {Vec2} */
-export function vec_from_size(size) {
-	var v = new Vec2()
-	v.x = size.w
-	v.y = size.h
-	return v
-}
-export const size_to_vec = vec_from_size
 
 /**
  @param   {Vec2} a
@@ -336,14 +320,8 @@ export function arc(x, y, r, start, end) {
 	return a
 }
 
-export class Size {
-	w = 0
-	h = 0
-}
-
 export class Rect extends Vec2 {
-	w = 0
-	h = 0
+	size = new Vec2
 }
 /**
  @param   {number} x
@@ -352,12 +330,7 @@ export class Rect extends Vec2 {
  @param   {number} h
  @returns {Rect}   */
 export function rect(x, y, w, h) {
-	let r = new Rect()
-	r.x = x
-	r.y = y
-	r.w = w
-	r.h = h
-	return r
+	return {x, y, size: {x: w, y: h}}
 }
 
 /**
@@ -373,8 +346,8 @@ export function vec_in_rect(rect, point) {
  @param   {number}  y
  @returns {boolean} */
  export function xy_in_rect(rect, x, y) {
-	return x >= rect.x && x < rect.x+rect.w &&
-	       y >= rect.y && y < rect.y+rect.h
+	return x >= rect.x && x < rect.x+rect.size.x &&
+	       y >= rect.y && y < rect.y+rect.size.y
 }
 
 /**
@@ -391,8 +364,8 @@ export function vec_in_rect(rect, point) {
  @returns {Vec2}   */
 export function xy_to_rvec_in_rect(rect, x, y) {
 	return vec2(
-		(x - rect.x) / rect.w,
-		(y - rect.y) / rect.h,
+		(x - rect.x) / rect.size.x,
+		(y - rect.y) / rect.size.y,
 	)
 }
 
@@ -687,10 +660,10 @@ export function arc_arc_intersection(a, b) {
  @returns {Vec2 | null} */
 export function arc_rect_intersection(arc, rect) {
 	return (
-	/* N */ arc_segment_intersection(arc, vec2(rect.x,        rect.y),        vec2(rect.x+rect.w, rect.y))        ||
-	/* E */ arc_segment_intersection(arc, vec2(rect.x+rect.w, rect.y),        vec2(rect.x+rect.w, rect.y+rect.h)) ||
-	/* S */ arc_segment_intersection(arc, vec2(rect.x+rect.w, rect.y+rect.h), vec2(rect.x,        rect.y+rect.h)) ||
-	/* W */ arc_segment_intersection(arc, vec2(rect.x,        rect.y+rect.h), vec2(rect.x,        rect.y))
+	/* N */ arc_segment_intersection(arc, vec2(rect.x,             rect.y),             vec2(rect.x+rect.size.x, rect.y))             ||
+	/* E */ arc_segment_intersection(arc, vec2(rect.x+rect.size.x, rect.y),             vec2(rect.x+rect.size.x, rect.y+rect.size.y)) ||
+	/* S */ arc_segment_intersection(arc, vec2(rect.x+rect.size.x, rect.y+rect.size.y), vec2(rect.x,             rect.y+rect.size.y)) ||
+	/* W */ arc_segment_intersection(arc, vec2(rect.x,             rect.y+rect.size.y), vec2(rect.x,             rect.y))
 	)
 }
 
@@ -701,14 +674,14 @@ export function arc_rect_intersection(arc, rect) {
  @returns {Vec2 | null} */
 export function arc_rect_rounded_intersection(a, rect, radius) {
 	return (
-	/* N  */ arc_segment_intersection(a, vec2(rect.x+radius, rect.y),        vec2(rect.x+rect.w-radius, rect.y))               ||
-	/* E  */ arc_segment_intersection(a, vec2(rect.x+rect.w, rect.y+radius), vec2(rect.x+rect.w       , rect.y+rect.h-radius)) ||
-	/* S  */ arc_segment_intersection(a, vec2(rect.x+radius, rect.y+rect.h), vec2(rect.x+rect.w-radius, rect.y+rect.h))        ||
-	/* W  */ arc_segment_intersection(a, vec2(rect.x       , rect.y+radius), vec2(rect.x              , rect.y+rect.h-radius)) ||
-	/* NW */ arc_arc_intersection(a, arc(rect.x+radius,        rect.y+radius,        radius, PI,      PI+PI/2)) ||
-	/* NE */ arc_arc_intersection(a, arc(rect.x+rect.w-radius, rect.y+radius,        radius, PI+PI/2, 0))       ||
-	/* SE */ arc_arc_intersection(a, arc(rect.x+rect.w-radius, rect.y+rect.h-radius, radius, 0,       PI/2))    ||
-	/* SW */ arc_arc_intersection(a, arc(rect.x+radius,        rect.y+rect.h-radius, radius, PI/2,    PI))
+	/* N  */ arc_segment_intersection(a, vec2(rect.x+radius,      rect.y),             vec2(rect.x+rect.size.x-radius, rect.y))                    ||
+	/* E  */ arc_segment_intersection(a, vec2(rect.x+rect.size.x, rect.y+radius),      vec2(rect.x+rect.size.x,        rect.y+rect.size.y-radius)) ||
+	/* S  */ arc_segment_intersection(a, vec2(rect.x+radius,      rect.y+rect.size.y), vec2(rect.x+rect.size.x-radius, rect.y+rect.size.y))        ||
+	/* W  */ arc_segment_intersection(a, vec2(rect.x,             rect.y+radius),      vec2(rect.x,                    rect.y+rect.size.y-radius)) ||
+	/* NW */ arc_arc_intersection(a, arc(rect.x+radius,             rect.y+radius,             radius, PI,      PI+PI/2)) ||
+	/* NE */ arc_arc_intersection(a, arc(rect.x+rect.size.x-radius, rect.y+radius,             radius, PI+PI/2, 0))       ||
+	/* SE */ arc_arc_intersection(a, arc(rect.x+rect.size.x-radius, rect.y+rect.size.y-radius, radius, 0,       PI/2))    ||
+	/* SW */ arc_arc_intersection(a, arc(rect.x+radius,             rect.y+rect.size.y-radius, radius, PI/2,    PI))
 	)
 }
 

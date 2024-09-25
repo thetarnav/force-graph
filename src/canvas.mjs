@@ -23,7 +23,7 @@ export class Canvas {
 
 	/* inputs */
 	canvas_rect      = new Rect
-	window_size      = new la.Size
+	window_size      = new Vec
 	pointers         = /** @type {PointerEvent[]} */([])
 	space_down       = false
 	wheel_delta      = 0
@@ -246,12 +246,12 @@ export function update_canvas_rect(c) {
 	c.ctx.canvas.width  = rect.width  * dpr
 	c.ctx.canvas.height = rect.height * dpr
 
-	c.canvas_rect.x = rect.left
-	c.canvas_rect.y = rect.top
-	c.canvas_rect.w = rect.width
-	c.canvas_rect.h = rect.height
-	c.window_size.w = window.innerWidth
-	c.window_size.h = window.innerHeight
+	c.canvas_rect.x      = rect.left
+	c.canvas_rect.y      = rect.top
+	c.canvas_rect.size.x = rect.width
+	c.canvas_rect.size.y = rect.height
+	c.window_size.x      = window.innerWidth
+	c.window_size.y      = window.innerHeight
 }
 
 /**
@@ -326,7 +326,7 @@ export function update_canvas_gestures(c) {
 		? c.move_init_pos
 		: c.pointers.length > 0
 			? pos_window_to_graph(c, la.vec_from_event_client(c.pointers[0]))
-			: pos_window_to_graph(c, la.vec_from_size(c.window_size))
+			: pos_window_to_graph(c, c.window_size)
 
 	/*
 	WHEEL SCROLLING
@@ -392,7 +392,7 @@ export function update_canvas_gestures(c) {
 		? pos_window_to_graph(c, la.vec_from_event_client(move_p))
 		: c.pointers.length > 0
 			? pos_window_to_graph(c, la.vec_from_event_client(c.pointers[0]))
-			: pos_window_to_graph(c, la.vec_from_size(c.window_size))
+			: pos_window_to_graph(c, c.window_size)
 
 	set_translate_xy(c,
 		c.pos.x - (after.x-before.x),

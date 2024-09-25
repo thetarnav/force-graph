@@ -41,7 +41,7 @@ export function vec_string(v) {
  * @param {number} r
  */
 export function draw_rect_rounded(ctx, rect, r) {
-	let {x, y, w, h} = rect
+	let {x, y, size: {x: w, y: h}} = rect
 	ctx.beginPath()
 	ctx.moveTo(x + r, y)
 	ctx.arcTo(x+w, y  , x+w, y+h, r)
@@ -76,9 +76,7 @@ export function get_clip_rect(ctx, margin = la.VEC_ZERO) {
 	let e = (width  + margin.x -t.e) / t.a
 	let s = (height + margin.y -t.f) / t.d
 	return {
-		x: w,
-		y: n,
-		w: e-w,
-		h: s-n,
+		x: w, y: n,
+		size: {x: e-w, y: s-n},
 	}
 }
