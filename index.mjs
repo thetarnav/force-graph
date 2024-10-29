@@ -4,14 +4,15 @@ import * as la    from "./src/linalg.mjs"
 import * as math  from "./src/math.mjs"
 import * as ctx2d from "./src/ctx2d.mjs"
 
-import raw_data from "./data.json" with {type: "json"}
+import raw_data_la    from "./data.json" with {type: "json"}
+import raw_data_repos from "./repos.json" with {type: "json"}
 
 /**
  @returns {fg.Graph}
 */
-export function get_graph_from_data() {
+export function get_graph_from_data_la() {
 
-	let entries  = Object.entries(raw_data)
+	let entries  = Object.entries(raw_data_la)
 	let node_map = /**@type {Map<string, fg.Node>}*/(new Map())
 
 	let g = fg.make_graph(fg.DEFAULT_OPTIONS)
@@ -48,6 +49,68 @@ export function get_graph_from_data() {
 	return g
 }
 
+/**
+ @returns {fg.Graph}
+*/
+export function get_graph_from_data_repos() {
+
+	/**
+	@typedef  {object} Mode_Map_Entry
+	@property {fg.Node}                         node
+	@property {number}                          edges
+	@property {(typeof raw_data_repos)[number]} repo
+	*/
+
+	let node_map = /**@type {Map<string, Mode_Map_Entry>}*/(new Map())
+
+	let g = fg.make_graph({
+		inertia_strength: 0.7,
+		repel_strength:   0.4,
+		repel_distance:   40,
+		link_strength:    0.015,
+		origin_strength:  0.001,
+		min_move:         0.001,
+		grid_size:        400,
+	})
+
+	let max_stars = 1
+
+	/* NODES */
+	for (let repo of raw_data_repos) {
+
+		let node = fg.make_node()
+		node.key   = repo.name
+		node.label = repo.name
+
+		fg.add_node(g, node)
+		node_map.set(repo.name, {node, repo, edges: 0})
+
+		if (max_stars < repo.stars) {
+			max_stars = repo.stars
+		}
+	}
+
+	/* CONNECTIONS */
+	for (let entry of node_map.values()) {
+		for (let link_name of entry.repo.deps) {
+			let link_entry = node_map.get(link_name)
+			if (link_entry) {
+				fg.connect(g, entry.node, link_entry.node)
+				link_entry.edges += 1
+			}
+		}
+	}
+
+	/* MASS */
+	for (let entry of node_map.values()) {
+		let mass_from_stars = entry.repo.stars/max_stars
+		let mass_from_edges = fg.node_mass_from_edges(entry.edges)
+		entry.node.mass = 6*mass_from_stars + mass_from_edges/2
+	}
+
+	return g
+}
+
 
 let log_el = document.body.appendChild(document.createElement("pre"))
 log_el.style.position      = "fixed"
@@ -63,10 +126,13 @@ if (ctx == null) {
 	throw new Error("Failed to get 2d context")
 }
 
-const g = get_graph_from_data()
+// const g = get_graph_from_data_la()
+const g = get_graph_from_data_repos()
 const c = fc.make_canvas(ctx, g)
 
-fg.set_positions_smart(g)
+// fg.set_positions_smart(g)
+// fg.set_positions_spread(g)
+fg.set_positions_random(g)
 
 // @ts-ignore
 window.state = c
@@ -75,10 +141,12 @@ window.state = c
 let last_time_interaction = Date.now()
 let last_time_frame       = 0
 let last_time_limit       = 0
+let initial_time          = 0
 
 requestAnimationFrame(time => {
 	last_time_frame = time
 	last_time_limit = time
+	initial_time    = time
 	frame(time)
 })
 
@@ -91,16 +159,19 @@ function frame(/** @type {number} */ time) {
 	let target_fps = 60/math.max((delta_time_interaction-4000)/6000, 1)
 	let target_ms  = 1000/target_fps
 
-	let times = (delta_time_limit / target_ms)|0
+	// slow down the simulation initially
+	let alpha = Math.min(1, (time +1000 -initial_time) / 3000)
+
+	let times = (delta_time_limit/target_ms)|0
+	times *= (60/target_fps)|0
+	times = math.min(times, 1 + (alpha*2)|0)
 
 	last_time_limit += times * target_ms
 	last_time_frame = time
 
-	times *= math.min((60/target_fps)|0, 3)
-
 	if (times > 0) {
 		for (let i = 0; i < times; i++) {
-			fg.simulate(g)
+			fg.simulate(g, alpha)
 			fc.update_canvas_gestures(c)
 		}
 		
