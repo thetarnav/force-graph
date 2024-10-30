@@ -7,6 +7,9 @@
 		"newLine": "LF",
 		"types": [],
 
+		/* TS in node */
+		"allowImportingTsExtensions": true,
+
 		/* JS */
 		"allowJs": true,
 		"checkJs": true,
