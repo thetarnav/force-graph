@@ -126,8 +126,8 @@ if (ctx == null) {
 	throw new Error('Failed to get 2d context')
 }
 
-// const g = get_graph_from_data_la()
-const g = get_graph_from_data_repos()
+const g = get_graph_from_data_la()
+// const g = get_graph_from_data_repos()
 const c = fc.make_canvas(ctx, g)
 
 // fg.set_positions_smart(g)
