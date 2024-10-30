@@ -62,20 +62,11 @@ type Query_Variables_Dependencies = {
 	amount:    number
 }
 
-type Gql_Query_Error = {
-	message: string
-}
-
-type Gql_Query_Result<T> = {
-	data:   T | null
-	errors: Gql_Query_Error[]
-}
-
-async function fetch_gql<V, T>(query: string, variables: V, token: string): Promise<T | null> {
+async function fetch_gql<V, T>(query: string, variables: V, token: string, retry_count = 0): Promise<T | null> {
 	let res = await fetch('https://api.github.com/graphql', {
 	    method: 'POST',
 	    headers: {
-	        'Content-Type': 'application/json',
+	        'Content-Type':  'application/json',
 	        'Authorization': `Bearer ${token}`
 	    },
 	    body: JSON.stringify({
@@ -90,7 +81,11 @@ async function fetch_gql<V, T>(query: string, variables: V, token: string): Prom
 		} else {
 			console.log(res.statusText)
 		}
-		return null
+		if (retry_count > 1) {
+			return null
+		}
+		await new Promise(r => setTimeout(r, 5000))
+		return fetch_gql(query, variables, token, retry_count+1)
 	}
 	if (Array.isArray(json.errors)) {
 		for (let err of json.errors) {
@@ -270,8 +265,8 @@ async function main() {
 
 	let json_repos = Array.from(repos_map.values()).map(repo_to_json_repo)
 
-	fs.writeFileSync('dependencies.json', JSON.stringify(json_repos, null, '\t'))
-	log('Result have been written to dependencies.json')
+	fs.writeFileSync('data_repos.json', JSON.stringify(json_repos, null, '\t'))
+	log('Result have been written to data_repos.json')
 	
 }
 

@@ -4,8 +4,8 @@ import * as la    from './src/linalg.mjs'
 import * as math  from './src/math.mjs'
 import * as ctx2d from './src/ctx2d.mjs'
 
-import raw_data_la    from './data.json' with {type: 'json'}
-import raw_data_repos from './repos.json' with {type: 'json'}
+import raw_data_la    from './data_la.json'    with {type: 'json'}
+import raw_data_repos from './data_repos.json' with {type: 'json'}
 
 /**
  @returns {fg.Graph}
