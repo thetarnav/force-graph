@@ -61,6 +61,7 @@ export const DEFAULT_OPTIONS = {
  @property {Options}  options
  @property {Node[]}   nodes
  @property {Edge[]}   edges
+ @property {number}   cols
 
  @property {Node[][]} grid
  Spatial grid for looking up surrounding nodes by their position.
@@ -138,13 +139,13 @@ export function make_node() {
  @param   {Options} options
  @returns {Graph}   */
 export function make_graph(options) {
-	let cols = get_grid_cols(options)
-	let grid = Array.from({length: cols*cols}, () => [])
+	let cols = Math.ceil(options.grid_size / 2 / options.repel_distance) * 2
 
 	return {
 		nodes:   [],
 		edges:   [],
-		grid:    grid,
+		cols:    cols,
+		grid:    Array.from({length: cols*cols}, () => []),
 		options: options,
 		max_pos: math.find_open_upper_bound(options.grid_size),
 	}
@@ -158,23 +159,15 @@ export function node_mass_from_edges(edges_length) {
 	return Math.log2(edges_length + 2)
 }
 
-
-/**
- @param   {Options} options
- @returns {number}  */
-export function get_grid_cols(options) {
-	return Math.ceil(options.grid_size / 2 / options.repel_distance) * 2
-}
-
 /**
  * **Note:** This function does not clamp the position to the grid.
- * @param   {Options} options
+ * @param   {Graph} g
  * @param   {Vec}     pos
  * @returns {number}  */
-export function pos_to_grid_idx(options, pos) {
-	let xi = Math.floor(pos.x / options.repel_distance)
-	let yi = Math.floor(pos.y / options.repel_distance)
-	return xi + yi * get_grid_cols(options)
+export function pos_to_grid_idx(g, pos) {
+	let xi = Math.floor(pos.x / g.options.repel_distance)
+	let yi = Math.floor(pos.y / g.options.repel_distance)
+	return xi + yi * g.cols
 }
 
 
@@ -230,7 +223,7 @@ export function clear_nodes(g) {
  @param {Node} node 
  @param {number} cell_idx 
 */
-export function add_node_to_grid(g, node, cell_idx = pos_to_grid_idx(g.options, node.pos)) {
+export function add_node_to_grid(g, node, cell_idx = pos_to_grid_idx(g, node.pos)) {
 
 	let cell = g.grid[cell_idx]
 	let i    = 0
@@ -409,10 +402,9 @@ export function find_closest_node(g, pos, max_dist = Infinity) {
 		return null
 	}
 
-	let grid_cols  = get_grid_cols(g.options)
-	let pos_idx    = pos_to_grid_idx(g.options, pos)
-	let x_axis_idx = pos_idx % grid_cols
-	let y_axis_idx = Math.floor(pos_idx / grid_cols)
+	let pos_idx    = pos_to_grid_idx(g, pos)
+	let x_axis_idx = pos_idx % g.cols
+	let y_axis_idx = Math.floor(pos_idx / g.cols)
 
 	/*
 		1 | -1, depending on which side of the cell the position is on
@@ -423,8 +415,8 @@ export function find_closest_node(g, pos, max_dist = Infinity) {
 	/*
 		clamp the index to the grid -> 1 | 0 | -1
 	*/
-	idx_dx = math.clamp(idx_dx, -x_axis_idx, grid_cols -1 -x_axis_idx)
-	idx_dy = math.clamp(idx_dy, -y_axis_idx, grid_cols -1 -y_axis_idx)
+	idx_dx = math.clamp(idx_dx, -x_axis_idx, g.cols -1 -x_axis_idx)
+	idx_dy = math.clamp(idx_dy, -y_axis_idx, g.cols -1 -y_axis_idx)
 
 	let closest_dist = max_dist
 	/** @type {Node | null} */
@@ -438,7 +430,7 @@ export function find_closest_node(g, pos, max_dist = Infinity) {
 		let dxi = idx_dx * xi
 
 		for (let yi = 0; yi <= 1; yi++) {
-			let idx = pos_idx + dxi + grid_cols * idx_dy * yi
+			let idx = pos_idx + dxi + g.cols * idx_dy * yi
 			let order = g.grid[idx]
 
 			if (dxi == -1) {
@@ -500,11 +492,12 @@ export function set_positions_spread(g) {
 
 	let margin    = g.options.grid_size/4
 	let max_width = g.options.grid_size - margin*2
-	let cols      = get_grid_cols(g.options)
 
 	for (let i = 0; i < g.nodes.length; i++) {
-		let x = margin + i%cols/cols                 * max_width
-		let y = margin + Math.ceil(i/cols)%cols/cols * max_width
+		let offset_x = i
+		let offset_y = Math.ceil(i/g.cols)
+		let x = margin + (offset_x % g.cols) / g.cols * max_width
+		let y = margin + (offset_y % g.cols) / g.cols * max_width
 		set_position_xy(g, g.nodes[i], x, y)
 	}
 }
@@ -592,14 +585,14 @@ export function set_position(g, node, pos) {
  @param {number} y
  @returns {void} */
 export function set_position_xy(g, node, x, y) {
-	let prev_idx = pos_to_grid_idx(g.options, node.pos)
+	let prev_idx = pos_to_grid_idx(g, node.pos)
 	let prev_x   = node.pos.x
 
 	node.pos.x = math.clamp(x, 0, g.max_pos)
 	node.pos.y = math.clamp(y, 0, g.max_pos)
 	node.moved = true
 
-	let idx   = pos_to_grid_idx(g.options, node.pos)
+	let idx   = pos_to_grid_idx(g, node.pos)
 	let cell  = g.grid[prev_idx]
 	let order = cell.indexOf(node)
 
@@ -663,9 +656,7 @@ export function push_nodes_away(g, a, b, dx, dy, alpha) {
  @param {number} [alpha]
  @returns {void} */
 export function simulate(g, alpha = 1) {
-	let {nodes, edges, grid, options} = g
-
-	let grid_cols = get_grid_cols(g.options)
+	let {nodes, edges, grid, options, cols} = g
 
 	for (let node of nodes) {
 		let {vel, pos} = node
@@ -682,14 +673,14 @@ export function simulate(g, alpha = 1) {
 			look only at the nodes right to the current node
 			and apply the force to both nodes
 		*/
-		let node_idx      = pos_to_grid_idx(options, pos)
-		let dy_min        = -(node_idx >= grid_cols)
-		let dy_max        = +(node_idx < grid.length - grid_cols)
-		let at_right_edge = node_idx % grid_cols === grid_cols-1
+		let node_idx      = pos_to_grid_idx(g, pos)
+		let dy_min        = -(node_idx >= cols)
+		let dy_max        = +(node_idx < cols*(cols-1))
+		let at_right_edge = node_idx % cols === cols-1
 
 		for (let dy_idx = dy_min; dy_idx <= dy_max; dy_idx++) {
 
-			let idx = node_idx + dy_idx * grid_cols
+			let idx = node_idx + dy_idx * cols
 
 			/*
 				from the right cell edge to the node
