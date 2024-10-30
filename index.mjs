@@ -1,11 +1,11 @@
-import * as fg    from "./src/force.mjs"
-import * as fc    from "./src/canvas.mjs"
-import * as la    from "./src/linalg.mjs"
-import * as math  from "./src/math.mjs"
-import * as ctx2d from "./src/ctx2d.mjs"
+import * as fg    from './src/force.mjs'
+import * as fc    from './src/canvas.mjs'
+import * as la    from './src/linalg.mjs'
+import * as math  from './src/math.mjs'
+import * as ctx2d from './src/ctx2d.mjs'
 
-import raw_data_la    from "./data.json" with {type: "json"}
-import raw_data_repos from "./repos.json" with {type: "json"}
+import raw_data_la    from './data.json' with {type: 'json'}
+import raw_data_repos from './repos.json' with {type: 'json'}
 
 /**
  @returns {fg.Graph}
@@ -112,18 +112,18 @@ export function get_graph_from_data_repos() {
 }
 
 
-let log_el = document.body.appendChild(document.createElement("pre"))
-log_el.style.position      = "fixed"
-log_el.style.top           = "10px"
-log_el.style.left          = "10px"
-log_el.style.pointerEvents = "none"
+let log_el = document.body.appendChild(document.createElement('pre'))
+log_el.style.position      = 'fixed'
+log_el.style.top           = '10px'
+log_el.style.left          = '10px'
+log_el.style.pointerEvents = 'none'
 
-const canvas_el = /** @type {HTMLCanvasElement} */ (document.getElementById("canvas"))
+const canvas_el = /** @type {HTMLCanvasElement} */ (document.getElementById('canvas'))
 
-const ctx = canvas_el.getContext("2d")
+const ctx = canvas_el.getContext('2d')
 if (ctx == null) {
-	document.body.textContent = "Failed to get 2d context"
-	throw new Error("Failed to get 2d context")
+	document.body.textContent = 'Failed to get 2d context'
+	throw new Error('Failed to get 2d context')
 }
 
 // const g = get_graph_from_data_la()
@@ -182,7 +182,7 @@ function frame(/** @type {number} */ time) {
 		`fps         = ${ctx2d.num_string(1000/delta_time_frame)}\n`+
 		`target_fps  = ${ctx2d.num_string(target_fps)}\n`+
 		`pointers    = ${c.pointers.map((e, i) => (
-			(i > 0 ? "\n              " : "") +
+			(i > 0 ? '\n              ' : '') +
 			`(${e.pointerId}, ${e.buttons}, ${ctx2d.vec_string(fc.pos_window_to_graph(c, la.vec_from_event_client(e)))})`
 		))}\n`+
 		`wheel_delta = ${ctx2d.num_string(c.wheel_delta)}\n`+
@@ -195,7 +195,7 @@ function frame(/** @type {number} */ time) {
 
 
 fc.update_canvas_rect(c)
-window.addEventListener("resize", () => {
+window.addEventListener('resize', () => {
 	fc.update_canvas_rect(c)
 })
 
@@ -224,41 +224,41 @@ function remove_pointer(e) {
 		}
 	}
 }
-document.addEventListener("pointermove", upsert_pointer)
-canvas_el.addEventListener("pointerdown", upsert_pointer)
-document.addEventListener("pointerup", e => {
-	if (e.pointerType === "touch") {
+document.addEventListener('pointermove', upsert_pointer)
+canvas_el.addEventListener('pointerdown', upsert_pointer)
+document.addEventListener('pointerup', e => {
+	if (e.pointerType === 'touch') {
 		remove_pointer(e)
 	} else {
 		upsert_pointer(e)
 	}
 })
-document.addEventListener("pointerleave", remove_pointer)
-document.addEventListener("pointercancel", remove_pointer)
+document.addEventListener('pointerleave', remove_pointer)
+document.addEventListener('pointercancel', remove_pointer)
 
-canvas_el.addEventListener("wheel", e => {
+canvas_el.addEventListener('wheel', e => {
 	e.preventDefault()
 	last_time_interaction = e.timeStamp
 	c.wheel_delta   += e.deltaY/2
 })
-canvas_el.addEventListener("click", e => {
+canvas_el.addEventListener('click', e => {
 	// if (c.mode === fc.Mode.Drag) {
-	// 	console.log("click", c.drag_node)
+	// 	console.log('click', c.drag_node)
 	// }
 })
-document.addEventListener("keydown", e => {
+document.addEventListener('keydown', e => {
 	last_time_interaction = e.timeStamp
 	switch (e.key) {
-	case " ": c.space_down = true ;break
+	case ' ': c.space_down = true ;break
 	}
 })
-document.addEventListener("keyup", e => {
+document.addEventListener('keyup', e => {
 	last_time_interaction = e.timeStamp
 	switch (e.key) {
-	case " ": c.space_down = false ;break
+	case ' ': c.space_down = false ;break
 	}
 })
-document.addEventListener("visibilitychange", e => {
+document.addEventListener('visibilitychange', e => {
 	if (document.hidden) {
 		last_time_interaction = 0
 	} else {
@@ -280,5 +280,5 @@ function preventCancelable(e) {
 }
 const NOT_PASSIVE = {passive: false}
 
-canvas_el.addEventListener("touchstart", preventCancelable, NOT_PASSIVE)
-canvas_el.addEventListener("touchmove" , preventCancelable, NOT_PASSIVE)
+canvas_el.addEventListener('touchstart', preventCancelable, NOT_PASSIVE)
+canvas_el.addEventListener('touchmove' , preventCancelable, NOT_PASSIVE)
