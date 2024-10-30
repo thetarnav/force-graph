@@ -65,7 +65,7 @@ export function get_graph_from_data_repos() {
 
 	let g = fg.make_graph({
 		inertia_strength: 0.7,
-		repel_strength:   0.7,
+		repel_strength:   0.2,
 		repel_distance:   60,
 		link_strength:    0.003,
 		origin_strength:  0.0004,
@@ -131,8 +131,8 @@ const g = get_graph_from_data_repos()
 const c = fc.make_canvas(ctx, g)
 
 // fg.set_positions_smart(g)
-// fg.set_positions_spread(g)
-fg.set_positions_random(g)
+fg.set_positions_spread(g)
+// fg.set_positions_random(g)
 
 // @ts-ignore
 window.state = c
