@@ -16,6 +16,8 @@ const IGNORED_REPO_NAMES = new Set([
 	'CyC2018/CS-Notes',
 	'laytan/setup-odin',
 	'DefinitelyTyped/DefinitelyTyped',
+	'Kikobeats/top-sites',
+	'octokit/tsconfig',
 ])
 
 function is_ignored(name: string): boolean {
@@ -347,7 +349,7 @@ async function main() {
 
 			for (let manifest of data.repository.manifests.nodes) {
 				for (let dep of manifest.dependencies.nodes) {
-					if (!is_ignored(repo.name) && dep.repository != null) {
+					if (dep.repository != null && !is_ignored(dep.repository.name)) {
 						add_repo(dep.repository)
 						repo.deps.add(dep.repository.name)
 					}
@@ -372,7 +374,7 @@ async function main() {
 
 					for (let manifest of data_deps.repository.manifests.nodes) {
 						for (let dep of manifest.dependencies.nodes) {
-							if (!is_ignored(repo.name) && dep.repository != null) {
+							if (dep.repository != null && !is_ignored(dep.repository.name)) {
 								add_repo(dep.repository)
 								repo.deps.add(dep.repository.name)
 							}
