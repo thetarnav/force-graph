@@ -70,7 +70,7 @@ export function get_graph_from_data_repos() {
 		link_strength:    0.015,
 		origin_strength:  0.001,
 		min_move:         0.001,
-		grid_size:        400,
+		grid_size:        500,
 	})
 
 	let max_stars = 1
