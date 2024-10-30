@@ -65,12 +65,12 @@ export function get_graph_from_data_repos() {
 
 	let g = fg.make_graph({
 		inertia_strength: 0.7,
-		repel_strength:   0.4,
-		repel_distance:   40,
-		link_strength:    0.015,
-		origin_strength:  0.001,
+		repel_strength:   0.7,
+		repel_distance:   60,
+		link_strength:    0.003,
+		origin_strength:  0.0004,
 		min_move:         0.001,
-		grid_size:        500,
+		grid_size:        1400,
 	})
 
 	let max_stars = 1
@@ -126,8 +126,8 @@ if (ctx == null) {
 	throw new Error('Failed to get 2d context')
 }
 
-const g = get_graph_from_data_la()
-// const g = get_graph_from_data_repos()
+// const g = get_graph_from_data_la()
+const g = get_graph_from_data_repos()
 const c = fc.make_canvas(ctx, g)
 
 // fg.set_positions_smart(g)

@@ -102,7 +102,7 @@ export function make_canvas(ctx, graph) {
  @param   {Canvas} c
  @returns {number} */
 export function get_node_radius(c) {
-	return 1/c.scale
+	return 1/c.scale/2
 }
 /**
  @param   {Canvas} c
@@ -117,7 +117,7 @@ export function get_pointer_node_radius(c) {
  @param   {number} scale
  @returns {number} */
 export function get_edge_width(canvas_size, scale) {
-	return (canvas_size / 8000 / scale) * 3
+	return (canvas_size / 8000 / scale)
 }
 /**
  @param   {number} ar
@@ -490,12 +490,12 @@ export function draw_nodes(c, clip_margin = {x: 100, y: 20}) {
 				c.ctx.fillStyle = COLOR_NORMAL
 				c.ctx.scale(1/s, 1/s)
 			}
-			/* CLOSE */
-			else if ((c.scale/c.scale_max)*10 + node.mass*0.4 > 4) {
-				c.ctx.scale(s, s)
-				c.ctx.fillText(node.label, x/s, y/s)
-				c.ctx.scale(1/s, 1/s)
-			}
+			// /* CLOSE */
+			// else if ((c.scale/c.scale_max)*10 + node.mass*0.4 > 4) {
+			// 	c.ctx.scale(s, s)
+			// 	c.ctx.fillText(node.label, x/s, y/s)
+			// 	c.ctx.scale(1/s, 1/s)
+			// }
 			/* FAR AWAY */
 			else {
 				c.ctx.moveTo(x, y)

@@ -16,24 +16,18 @@ const IGNORED_REPO_NAMES = new Set([
 	'CyC2018/CS-Notes',
 	'laytan/setup-odin',
 	'DefinitelyTyped/DefinitelyTyped',
-	'github/codeql-action',
 ])
 
 function is_ignored(name: string): boolean {
-	return IGNORED_REPO_NAMES.has(name) || /\bactions\b/.test(name) || /\baction\b/.test(name)
+	return IGNORED_REPO_NAMES.has(name) || /\bactions\b/.test(name) || /\baction\b/.test(name) || /\bsetup\b/.test(name)
 }
 
 // personal favorites I want to include
 const SELECTED_REPO_NAMES = [
 	'thetarnav/odin-wasm',
-	'thetarnav/streaming-markdown',
-	'thetarnav/tmjs',
 	'DanielGavin/ols',
 	'thetarnav/bilang',
 	'thetarnav/solid-devtools',
-	'thetarnav/grid-graph',
-	'thetarnav/force-graph',
-	'thetarnav/glitched-writer',
 	'microsoft/vscode',
 	'darktable-org/darktable',
 	'webui-dev/webui',
@@ -49,7 +43,9 @@ const SELECTED_REPO_NAMES = [
 	'lapce/lapce',
 	'torvalds/linux',
 	'excalidraw/excalidraw',
-	'blender/blender'
+	'blender/blender',
+	'godotengine/godot',
+	'Aider-AI/aider',
 ]
 
 const DEP_MANIFESTS_AMOUNT = 6
@@ -364,7 +360,7 @@ async function main() {
 
 	for (let i = 0; i < 2; i++) {
 		for (let repo of Array.from(repos_map.values())) {
-			if (repo.fetched_deps) continue
+			if (repo.fetched_deps || is_ignored(repo.name)) continue
 
 			add_task(async () => {
 
@@ -376,7 +372,7 @@ async function main() {
 
 					for (let manifest of data_deps.repository.manifests.nodes) {
 						for (let dep of manifest.dependencies.nodes) {
-							if (!IGNORED_REPO_NAMES.has(repo.name) && dep.repository != null) {
+							if (!is_ignored(repo.name) && dep.repository != null) {
 								add_repo(dep.repository)
 								repo.deps.add(dep.repository.name)
 							}
