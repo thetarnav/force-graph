@@ -16,6 +16,37 @@ const IGNORED_REPO_NAMES = new Set([
 	'CyC2018/CS-Notes'
 ])
 
+// personal favorites I want to include
+const SELECTED_REPO_NAMES = [
+	'thetarnav/odin-wasm',
+	'thetarnav/streaming-markdown',
+	'thetarnav/tmjs',
+	'DanielGavin/ols',
+	'thetarnav/bilang',
+	'thetarnav/solid-devtools',
+	'thetarnav/grid-graph',
+	'thetarnav/force-graph',
+	'thetarnav/glitched-writer',
+	'microsoft/vscode',
+	'darktable-org/darktable',
+	'webui-dev/webui',
+	'jart/cosmopolitan',
+	'monkeytypegame/monkeytype',
+	'zyedidia/micro',
+	'raysan5/raylib',
+	'floooh/sokol',
+	'aseprite/aseprite',
+	'sharkdp/hyperfine',
+	'fish-shell/fish-shell',
+	'junegunn/fzf',
+	'vitessio/vitess',
+	'lapce/lapce',
+	'torvalds/linux',
+	'excalidraw/excalidraw'
+]
+
+const DEP_MANIFESTS_AMOUNT = 6
+
 const QUERY_FIELDS_REPO = `
 	name:  nameWithOwner
 	stars: stargazerCount
@@ -31,7 +62,7 @@ const QUERY_TOP_REPOS = `query($amount: Int!) {
 
 const QUERY_DEPS = `query($owner: String!, $repo_name: String!, $amount: Int!) {
 	repository(owner: $owner, name: $repo_name) {
-		manifests: dependencyGraphManifests(first: 6) {
+		manifests: dependencyGraphManifests(first: ${DEP_MANIFESTS_AMOUNT}) {
 			nodes {
 				dependencies(first: $amount) {
 					nodes {
@@ -78,6 +109,45 @@ type Query_Variables_Dependencies = {
 	amount:    number
 }
 
+const QUERY_REPO_DETAILS = `query($owner: String!, $repo_name: String!, $amount: Int!) {
+    repository(owner: $owner, name: $repo_name) {
+        ... on Repository {
+            ${QUERY_FIELDS_REPO}
+            manifests: dependencyGraphManifests(first: ${DEP_MANIFESTS_AMOUNT}) {
+                nodes {
+                    dependencies(first: $amount) {
+                        nodes {
+                            repository {${QUERY_FIELDS_REPO}}
+                        }
+                    }
+                }
+            }
+        }
+    }
+}`
+
+type Query_Data_Repo_Details = {
+    repository: {
+        name:  string
+        stars: number
+        manifests: {
+            nodes: {
+                dependencies: {
+                    nodes: {
+                        repository: Query_Data_Repo | null
+                    }[]
+                }
+            }[]
+        }
+    }
+}
+
+type Query_Variables_Repo_Details = {
+    owner:     string
+    repo_name: string
+    amount:    number
+}
+
 async function fetch_gql<V, T>(query: string, variables: V, token: string, retry_count = 0): Promise<T | null> {
 	let res = await fetch('https://api.github.com/graphql', {
 	    method: 'POST',
@@ -97,11 +167,12 @@ async function fetch_gql<V, T>(query: string, variables: V, token: string, retry
 		} else {
 			console.log(res.statusText)
 		}
-		if (retry_count > 1) {
+		if (retry_count > 2) {
 			return null
 		}
-		await new Promise(r => setTimeout(r, 5000))
-		return fetch_gql(query, variables, token, retry_count+1)
+		retry_count += 1
+		await new Promise(r => setTimeout(r, retry_count*5000))
+		return fetch_gql(query, variables, token, retry_count)
 	}
 	if (Array.isArray(json.errors)) {
 		for (let err of json.errors) {
@@ -118,6 +189,11 @@ function fetch_top_repositories(amount: number, token: string): Promise<Query_Da
 function fetch_dependencies(name: string, amount: number, token: string): Promise<Query_Data_Dependencies | null> {
 	let [owner, repo_name] = name.split('/')
 	return fetch_gql<Query_Variables_Dependencies, Query_Data_Dependencies>(QUERY_DEPS, {owner, repo_name, amount}, token)
+}
+
+function fetch_details(name: string, amount: number, token: string): Promise<Query_Data_Repo_Details | null> {
+	let [owner, repo_name] = name.split('/')
+	return fetch_gql<Query_Variables_Repo_Details, Query_Data_Repo_Details>(QUERY_REPO_DETAILS, {owner, repo_name, amount}, token)
 }
 
 type Repo = {
@@ -149,7 +225,6 @@ function repo_to_json_repo(repo: Repo): JSON_Repo {
 }
 
 type Task = {
-	title:    string
 	factory:  () => Promise<void>
 	priority: number
 	running:  boolean
@@ -206,9 +281,8 @@ function run_tasks(): void {
 	}
 }
 
-function add_task(title: string, factory: () => Promise<void>): void {
+function add_task(factory: () => Promise<void>): void {
 	let task: Task = {
-		title:    title,
 		factory:  factory,
 		priority: 1/(task_queue.length+1),
 		running:  false,
@@ -227,40 +301,71 @@ async function main() {
 
 	let repos_map = new Map<string, Repo>()
 
-	function add_repo(repo: Query_Data_Repo) {
-		if (!repos_map.has(repo.name)) {
-			repos_map.set(repo.name, {
-				name:         repo.name,
-				stars:        repo.stars,
+	function add_repo(data: Query_Data_Repo): Repo {
+		let repo = repos_map.get(data.name)
+		if (repo == null) {
+			repo = {
+				name:         data.name,
+				stars:        data.stars,
 				deps:         new Set(),
 				fetched_deps: false,
-			})
+			}
+			repos_map.set(data.name, repo)
 		}
+		return repo
 	}
 
-	let data_top_repos = await fetch_top_repositories(20, token)
-	if (!data_top_repos) {
-		throw Error("Couldn't fetch top repositories")
-	}
-	log('Fetched top repositories')
+	// let data_top_repos = await fetch_top_repositories(20, token)
+	// if (!data_top_repos) {
+	// 	throw Error("Couldn't fetch top repositories")
+	// }
+	// log('Fetched top repositories')
 
-	for (let repo of data_top_repos.search.nodes) {
-		if (!IGNORED_REPO_NAMES.has(repo.name)) {
-			add_repo(repo)
-		}
+	// for (let repo of data_top_repos.search.nodes) {
+	// 	if (!IGNORED_REPO_NAMES.has(repo.name)) {
+	// 		add_repo(repo)
+	// 	}
+	// }
+
+	for (let name of SELECTED_REPO_NAMES) {
+		add_task(async () => {
+
+			log(`Fetching ${name}...`)
+
+			let data = await fetch_details(name, 20, token)
+			if (data == null) {
+				error(`Couldn't fetch ${name}.`)
+				return
+			}
+			log(`Fetched ${name}!`)
+
+			let repo = add_repo(data.repository)
+			repo.fetched_deps = true
+
+			for (let manifest of data.repository.manifests.nodes) {
+				for (let dep of manifest.dependencies.nodes) {
+					if (!IGNORED_REPO_NAMES.has(repo.name) && dep.repository != null) {
+						add_repo(dep.repository)
+						repo.deps.add(dep.repository.name)
+					}
+				}
+			}
+		})
+
+		await until_all_tasks_are_done
 	}
 
 	for (let i = 0; i < 2; i++) {
 		for (let repo of Array.from(repos_map.values())) {
 			if (repo.fetched_deps) continue
 
-			add_task(`Fetch dependencies of ${repo.name}`, async () => {
+			add_task(async () => {
 
-				log(`Fetching dependencies of ${repo.name}...`)
+				log(`Fetching ${repo.name}...`)
 
 				let data_deps = await fetch_dependencies(repo.name, 20, token)
 				if (data_deps != null) {
-					log(`Fetched dependencies of ${repo.name}!`)
+					log(`Fetched ${repo.name}!`)
 
 					for (let manifest of data_deps.repository.manifests.nodes) {
 						for (let dep of manifest.dependencies.nodes) {
@@ -271,7 +376,7 @@ async function main() {
 						}
 					}
 				} else {
-					error(`Couldn't fetch deps for ${repo.name}.`)
+					error(`Couldn't fetch ${repo.name}.`)
 				}
 
 				repo.fetched_deps = true
