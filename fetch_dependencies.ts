@@ -13,8 +13,15 @@ const IGNORED_REPO_NAMES = new Set([
 	'996icu/996.ICU',
 	'practical-tutorials/project-based-learning',
 	'getify/You-Dont-Know-JS',
-	'CyC2018/CS-Notes'
+	'CyC2018/CS-Notes',
+	'laytan/setup-odin',
+	'DefinitelyTyped/DefinitelyTyped',
+	'github/codeql-action',
 ])
+
+function is_ignored(name: string): boolean {
+	return IGNORED_REPO_NAMES.has(name) || /\bactions\b/.test(name) || /\baction\b/.test(name)
+}
 
 // personal favorites I want to include
 const SELECTED_REPO_NAMES = [
@@ -30,7 +37,6 @@ const SELECTED_REPO_NAMES = [
 	'microsoft/vscode',
 	'darktable-org/darktable',
 	'webui-dev/webui',
-	'jart/cosmopolitan',
 	'monkeytypegame/monkeytype',
 	'zyedidia/micro',
 	'raysan5/raylib',
@@ -42,7 +48,8 @@ const SELECTED_REPO_NAMES = [
 	'vitessio/vitess',
 	'lapce/lapce',
 	'torvalds/linux',
-	'excalidraw/excalidraw'
+	'excalidraw/excalidraw',
+	'blender/blender'
 ]
 
 const DEP_MANIFESTS_AMOUNT = 6
@@ -322,7 +329,7 @@ async function main() {
 	// log('Fetched top repositories')
 
 	// for (let repo of data_top_repos.search.nodes) {
-	// 	if (!IGNORED_REPO_NAMES.has(repo.name)) {
+	// 	if (!is_ignored(repo.name)) {
 	// 		add_repo(repo)
 	// 	}
 	// }
@@ -344,7 +351,7 @@ async function main() {
 
 			for (let manifest of data.repository.manifests.nodes) {
 				for (let dep of manifest.dependencies.nodes) {
-					if (!IGNORED_REPO_NAMES.has(repo.name) && dep.repository != null) {
+					if (!is_ignored(repo.name) && dep.repository != null) {
 						add_repo(dep.repository)
 						repo.deps.add(dep.repository.name)
 					}
