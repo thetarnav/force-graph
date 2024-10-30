@@ -1,5 +1,21 @@
 import * as fs from 'node:fs'
 
+// don't care about books / awesome lists
+const IGNORED_REPO_NAMES = new Set([
+	'codecrafters-io/build-your-own-x',
+	'vinta/awesome-python',
+	'awesome-selfhosted/awesome-selfhosted',
+	'sindresorhus/awesome',
+	'jwasham/coding-interview-university',
+	'public-apis/public-apis',
+	'kamranahmedse/developer-roadmap',
+	'donnemartin/system-design-primer',
+	'996icu/996.ICU',
+	'practical-tutorials/project-based-learning',
+	'getify/You-Dont-Know-JS',
+	'CyC2018/CS-Notes'
+])
+
 const QUERY_FIELDS_REPO = `
 	name:  nameWithOwner
 	stars: stargazerCount
@@ -229,7 +245,9 @@ async function main() {
 	log('Fetched top repositories')
 
 	for (let repo of data_top_repos.search.nodes) {
-		add_repo(repo)
+		if (!IGNORED_REPO_NAMES.has(repo.name)) {
+			add_repo(repo)
+		}
 	}
 
 	for (let i = 0; i < 2; i++) {
@@ -246,10 +264,10 @@ async function main() {
 
 					for (let manifest of data_deps.repository.manifests.nodes) {
 						for (let dep of manifest.dependencies.nodes) {
-							if (dep.repository == null) continue
-
-							add_repo(dep.repository)
-							repo.deps.add(dep.repository.name)
+							if (!IGNORED_REPO_NAMES.has(repo.name) && dep.repository != null) {
+								add_repo(dep.repository)
+								repo.deps.add(dep.repository.name)
+							}
 						}
 					}
 				} else {
