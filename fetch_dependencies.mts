@@ -1,6 +1,6 @@
 import * as fs from 'node:fs'
 
-// don't care about books / awesome lists
+// don't care about books / awesome lists / configs
 const IGNORED_REPO_NAMES = new Set([
 	'codecrafters-io/build-your-own-x',
 	'vinta/awesome-python',
@@ -18,10 +18,12 @@ const IGNORED_REPO_NAMES = new Set([
 	'DefinitelyTyped/DefinitelyTyped',
 	'Kikobeats/top-sites',
 	'octokit/tsconfig',
+	'indexzero/populist-style',
 ])
 
 function is_ignored(name: string): boolean {
-	return IGNORED_REPO_NAMES.has(name) || /\bactions\b/.test(name) || /\baction\b/.test(name) || /\bsetup\b/.test(name)
+	return IGNORED_REPO_NAMES.has(name) ||
+	       /\b(actions|action|setup|config)\b/.test(name)
 }
 
 // personal favorites I want to include
