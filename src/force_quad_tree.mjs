@@ -513,13 +513,6 @@ function get_quad_child(quad_node, pos) {
     }
 }
 
-let lower_count = 0
-let higher_count = 0
-
-setTimeout(() => {
-	console.log({lower_count, higher_count})
-}, 10000)
-
 /**
     Calculate the repulsive force on a node using the quad-tree.
     @param {Node}         node
